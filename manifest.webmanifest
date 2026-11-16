@@ -1,0 +1,42 @@
+{
+  "name": "Neko Heist",
+  "short_name": "Neko Heist",
+  "id": "com.nekoheist.game",
+  "description": "Cat burglars rob a Japanese manor.",
+  "orientation": "landscape",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "black",
+  "categories": ["games", "entertainment"],
+  "icons": [{
+        "src": "icon_36.png",
+        "sizes": "36x36"
+      },{
+        "src": "icon_48.png",
+        "sizes": "48x48"
+      },{
+        "src": "icon_72.png",
+        "sizes": "72x72"
+      },{
+        "src": "icon_96.png",
+        "sizes": "96x96"
+      },{
+        "src": "icon_120.png",
+        "sizes": "120x120"
+      },{
+        "src": "icon_144.png",
+        "sizes": "144x144"
+      },{
+        "src": "icon_152.png",
+        "sizes": "152x152"
+      },{
+        "src": "icon_180.png",
+        "sizes": "180x180"
+      },{
+        "src": "icon_192.png",
+        "sizes": "192x192"
+      },{
+        "src": "icon_512.png",
+        "sizes": "512x512"
+      }]
+}
