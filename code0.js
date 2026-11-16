@@ -71,7 +71,7 @@ gdjs.ManorCode.GDLabelObjects1= [];
 gdjs.ManorCode.GDWorldTextObjects1= [];
 
 
-gdjs.ManorCode.userFunc0xb7b8f8 = function GDJSInlineCode(runtimeScene) {
+gdjs.ManorCode.userFunc0x9e3070 = function GDJSInlineCode(runtimeScene) {
 "use strict";
 // ===================================================================
 //  NEKO HEIST (猫の大泥棒)
@@ -3718,7 +3718,7 @@ gdjs.ManorCode.eventsList0 = function(runtimeScene) {
 {
 
 
-gdjs.ManorCode.userFunc0xb7b8f8(runtimeScene);
+gdjs.ManorCode.userFunc0x9e3070(runtimeScene);
 
 }
 
