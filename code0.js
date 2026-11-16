@@ -42,6 +42,7 @@ gdjs.ManorCode.GDRippleObjects1= [];
 gdjs.ManorCode.GDPawObjects1= [];
 gdjs.ManorCode.GDPortraitObjects1= [];
 gdjs.ManorCode.GDPortraitRingObjects1= [];
+gdjs.ManorCode.GDPryGlowObjects1= [];
 gdjs.ManorCode.GDCaughtObjects1= [];
 gdjs.ManorCode.GDLanternObjects1= [];
 gdjs.ManorCode.GDActionBtnObjects1= [];
@@ -70,7 +71,7 @@ gdjs.ManorCode.GDLabelObjects1= [];
 gdjs.ManorCode.GDWorldTextObjects1= [];
 
 
-gdjs.ManorCode.userFunc0xa69b30 = function GDJSInlineCode(runtimeScene) {
+gdjs.ManorCode.userFunc0x93ee18 = function GDJSInlineCode(runtimeScene) {
 "use strict";
 // ===================================================================
 //  NEKO HEIST (猫の大泥棒)
@@ -1961,13 +1962,13 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     const k = G.cats[i];
     k.deployed = true; k.c = c; k.r = r; k.face = c === 0 ? 1 : -1;
     const p = catXY(k, c, r);
-    k.obj = M('Cat', p.x, p.y - 160, 60);
+    k.obj = M('Cat', p.x, p.y - 160, 60 + 2 * i);       // each cat gets its own layer: cat, then its loot bag, then its hat
     k.obj.setScale(CAT_SCALE);
     k.obj.flipX(k.face < 0);
     k.from = { x: p.x, y: p.y - 160 }; k.to = p; k.tc = c; k.tr = r;
     k.moving = true; k.mt = 0; k.mdur = 0.5; k.jump = true; k.drop = true;
     anim(k.obj, k.id + '_jump');
-    k.hat = wearHat(k.id, k.obj, CAT_SCALE);
+    k.hat = wearHat(k.id, k.obj, CAT_SCALE); if (k.hat) k.hat.setZOrder(61 + 2 * i);
     sfx('jump', 55, 0.1);
     if (!G.practice) { stat('deploys'); SV.catUse[k.id] = (SV.catUse[k.id] || 0) + 1; }
     G.deploying = -1;
@@ -2413,6 +2414,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     const carrier = G.cats.find((k) => k.hasLoot && active(k));
     if (carrier || G.lootFloor) {
       if (!G.lootObj) G.lootObj = M('Loot', 0, 0, 62);
+      G.lootObj.setZOrder(carrier ? 60.5 + 2 * carrier.i : 59.5);   // held: just above its carrier; on the floor: behind every cat
       if (carrier) G.lootObj.setPosition(carrier.obj.getX() + (carrier.face > 0 ? 10 : CAT_W - 58), carrier.obj.getY() + 4);
       else G.lootObj.setPosition(cx(G.lootFloor.c) + 52, cy(G.lootFloor.r) + FLOOR - 42);
       G.glintT -= dt;
@@ -3277,6 +3279,13 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
         }
       }
     }
+    // every shutter shut and Mike selected next to one: point at the shutter he can pry open
+    const pry = G.state === 'play' && openShutters() === 0 && mike && !mike.caught && mike.deployed && !mike.moving && !mike.hidden && G.selected === mike.i ? adjacentClosedShutter(mike) : null;
+    if (pry && !ui.pryMark) ui.pryMark = M('PryGlow', 0, 0, 84);      // a pulsing halo framing the shutter, just behind it
+    if (ui.pryMark) {
+      ui.pryMark.hide(!pry);
+      if (pry) { ui.pryMark.setPosition(pry.obj.getX() - 24, pry.obj.getY() - 24); ui.pryMark.setOpacity(120 + 135 * Math.abs(Math.sin(G.t * 3.5))); }
+    }
     const tag = { boss: 'BOSS', daily: 'Daily', practice: 'Practice', tutorial: 'Training', normal: G.LG.short }[G.mode] + (G.night ? ' - Night' : '');
     txt(ui.hud, tag + '\nShutters ' + openShutters() + '/10\nAlarms ' + G.alarm);
     const awake = G.dogs.some((d) => !d.patrol && d.state !== 'sleep');
@@ -3414,7 +3423,7 @@ gdjs.ManorCode.eventsList0 = function(runtimeScene) {
 {
 
 
-gdjs.ManorCode.userFunc0xa69b30(runtimeScene);
+gdjs.ManorCode.userFunc0x93ee18(runtimeScene);
 
 }
 
@@ -3465,6 +3474,7 @@ gdjs.ManorCode.GDRippleObjects1.length = 0;
 gdjs.ManorCode.GDPawObjects1.length = 0;
 gdjs.ManorCode.GDPortraitObjects1.length = 0;
 gdjs.ManorCode.GDPortraitRingObjects1.length = 0;
+gdjs.ManorCode.GDPryGlowObjects1.length = 0;
 gdjs.ManorCode.GDCaughtObjects1.length = 0;
 gdjs.ManorCode.GDLanternObjects1.length = 0;
 gdjs.ManorCode.GDActionBtnObjects1.length = 0;
@@ -3534,6 +3544,7 @@ gdjs.ManorCode.GDRippleObjects1.length = 0;
 gdjs.ManorCode.GDPawObjects1.length = 0;
 gdjs.ManorCode.GDPortraitObjects1.length = 0;
 gdjs.ManorCode.GDPortraitRingObjects1.length = 0;
+gdjs.ManorCode.GDPryGlowObjects1.length = 0;
 gdjs.ManorCode.GDCaughtObjects1.length = 0;
 gdjs.ManorCode.GDLanternObjects1.length = 0;
 gdjs.ManorCode.GDActionBtnObjects1.length = 0;
