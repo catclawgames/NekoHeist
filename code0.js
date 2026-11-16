@@ -70,7 +70,7 @@ gdjs.ManorCode.GDLabelObjects1= [];
 gdjs.ManorCode.GDWorldTextObjects1= [];
 
 
-gdjs.ManorCode.userFunc0xd9fb10 = function GDJSInlineCode(runtimeScene) {
+gdjs.ManorCode.userFunc0xa69b30 = function GDJSInlineCode(runtimeScene) {
 "use strict";
 // ===================================================================
 //  NEKO HEIST (猫の大泥棒)
@@ -391,7 +391,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
              treasures: {}, ach: {}, layouts: [null, null, null], muted: false,
              lang: (() => { try { return /^ja/i.test(navigator.language || '') ? 'ja' : 'en'; } catch (e) { return 'en'; } })(),
              league: 1, maxLeague: 1, leagueWins: [0, 0, 0, 0, 0], leagueStars: [0, 0, 0, 0, 0], bossBeaten: [false, false, false, false, false],
-             upgrades: {}, daily: { date: '', won: false, stars: 0 }, stats: {}, catUse: {}, playTime: 0,
+             upgrades: {}, daily: { date: '', won: false, stars: 0 }, stats: {}, catUse: {}, playTime: 0, seenTraps: {},
              gadgets: { fish: 1, rope: 1, smoke: 1 }, hatsOwned: [], hatsWorn: {}, tutorialDone: false, tutorialOffered: false,
              musicVol: 80, sfxVol: 100, vibrate: true, playerName: '' };
   }
@@ -1835,7 +1835,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     { text: 'Safe! Now climb two floors: press Up twice (moving also brings you out of hiding). The vault is up there.',
       done: (k) => k.r <= 1 && !k.moving, past: () => G.vault.open, point: () => tutCell(3, 1) },
     { text: 'There it is! Walk into the vault room and press Space to crack it. Stay still while it cracks - it is a little noisy.',
-      done: () => G.vault.open, point: (k) => (k.c === G.vault.c && k.r === G.vault.r ? { x: 1522, y: 742 } : tutCell(G.vault.c, G.vault.r)) },
+      done: () => G.vault.open, point: (k) => (k.c === G.vault.c && k.r === G.vault.r ? (k.cracking ? null : { x: 1522, y: 742 }) : tutCell(G.vault.c, G.vault.r)) },
     { text: 'You have the loot! Escape: carry it out to a balcony through an open shutter. The left balcony is closest.',
       done: () => false, point: (k) => tutCell(0, k.r) },
   ];
@@ -1843,7 +1843,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     G.tut = { step: -1, t: 0 };
     const pl = U('Button', 236, 828, 150); anim(pl, 'wide'); size(pl, 900, 66);
     const tx = label('', 256, 836, 18, INK, null, 860); tx.setZOrder(151);
-    const ptr = U('Pointer', 0, 0, 160);
+    const ptr = U('Pointer', 0, 0, 160); ptr.hide(true);     // shown once the intro doors have opened
     G.tut.objs = { pl: pl, tx: tx, ptr: ptr };
     tutorialNext();
   }
@@ -2770,10 +2770,31 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     sfx('star', 80, 0, 1.2); later(0.15, () => sfx('coin', 60, 0, 1.4));
     G.fx.push({ kind: 'toast', t: 0, bg: bg, parts: [[t1, 14], [t2, 34], [t3, 66]] });
   }
+  function trapReveal(c, r, kind) {
+    const x = cx(c) + CW / 2, y = cy(r) + CH / 2 + 6;
+    const ring = M('Ripple', x - 80, y - 80, 94); if (ring.setColor) ring.setColor('255;214;120');
+    const nm = TRAP_NAMES[kind] || kind;
+    const t = M('WorldText', 0, 0, 96); txt(t, nm.charAt(0).toUpperCase() + nm.slice(1)); outline(t, true);
+    if (t.setCharacterSize) t.setCharacterSize(20); if (t.setColor) t.setColor('255;226;150');
+    t.setX(x - (t.getWidth() || nm.length * 10) / 2); t.setY(cy(r) + 6);
+    for (let i = 0; i < 8; i++) sparkle(x, y, 1);
+    sfx('ding', 70, 0, 1.2);
+    G.fx.push({ kind: 'treveal', ring: ring, label: t, x: x, y: y, ly: cy(r) + 6, t: 0 });
+  }
   function updateFx(dt) {
     for (let i = G.fx.length - 1; i >= 0; i--) {
       const f = G.fx[i];
       f.t += dt;
+      if (f.kind === 'treveal') {           // soft golden glow pulsing twice, name floating above the trap
+        const T = 2.8, u = (f.t % 0.8) / 0.8, sc = 0.45 + u * 0.7;
+        f.ring.setScale && f.ring.setScale(sc);
+        f.ring.setPosition(f.x - 80 * sc, f.y - 80 * sc);
+        f.ring.setOpacity(f.t < 1.6 ? 230 * (1 - u) : 0);
+        const a = f.t < 0.25 ? f.t / 0.25 : f.t > T - 0.6 ? Math.max(0, (T - f.t) / 0.6) : 1;
+        f.label.setOpacity(255 * a); f.label.setY(f.ly - Math.min(1, f.t / 0.4) * 6);
+        if (f.t >= T) { kill(f.ring); kill(f.label); G.fx.splice(i, 1); }
+        continue;
+      }
       if (f.kind === 'puff') {
         if (f.t < 0) { f.o.setOpacity(0); continue; }
         const u = f.t / f.dur;
@@ -2901,6 +2922,11 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     for (let r = 0; r < ROWS; r++) for (let c = 1; c < COLS - 1; c++) {
       const cell = G.cells[r][c];
       if (cell.trapObj) cell.trapObj.hide(!cell.revealed);
+      // the first time you ever uncover a kind of trap, it glows and shows its name
+      if (cell.trapObj && cell.revealed && cell.type === 'trap' && !G.revealAll && G.state === 'play') {
+        SV.seenTraps = SV.seenTraps || {};
+        if (!SV.seenTraps[cell.trap]) { SV.seenTraps[cell.trap] = true; save(); trapReveal(c, r, cell.trap); }
+      }
     }
     for (const sl of G.side) if (!sl.taken) sl.obj.hide(!G.cells[sl.r][sl.c].revealed);
     for (const h of G.hides) h.hide.obj.hide(!h.revealed);
@@ -3388,7 +3414,7 @@ gdjs.ManorCode.eventsList0 = function(runtimeScene) {
 {
 
 
-gdjs.ManorCode.userFunc0xd9fb10(runtimeScene);
+gdjs.ManorCode.userFunc0xa69b30(runtimeScene);
 
 }
 
