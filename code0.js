@@ -71,7 +71,7 @@ gdjs.ManorCode.GDLabelObjects1= [];
 gdjs.ManorCode.GDWorldTextObjects1= [];
 
 
-gdjs.ManorCode.userFunc0xa73040 = function GDJSInlineCode(runtimeScene) {
+gdjs.ManorCode.userFunc0xb7b8f8 = function GDJSInlineCode(runtimeScene) {
 "use strict";
 // ===================================================================
 //  NEKO HEIST (猫の大泥棒)
@@ -673,6 +673,17 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
         if (u >= 1) { f.o.setY(f.y1); scr.fx.splice(i, 1); }
         continue;
       }
+      if (f.kind === 'intro') {
+        if (scr.introSkip) f.t = f.dur;
+        if (f.t < 0) continue;
+        const u = Math.min(1, f.t / f.dur);
+        const e = f.ease === 'drop' ? (u < 0.7 ? Math.pow(u / 0.7, 2) : 1 - Math.sin((u - 0.7) / 0.3 * Math.PI) * 0.06)   // falls, then a little bounce
+                                    : 1 - Math.pow(1 - u, 3);
+        if (!f.fixed) f.o.setPosition(f.x + f.dx * (1 - e), f.y + f.dy * (1 - e));
+        if (f.o.setOpacity) f.o.setOpacity(f.op * Math.min(1, u * 2));
+        if (u >= 1) { if (!f.fixed) f.o.setPosition(f.x, f.y); if (f.o.setOpacity) f.o.setOpacity(f.op); scr.fx.splice(i, 1); }
+        continue;
+      }
       if (f.kind === 'toast') {
         const IN = 0.35, HOLD = 2.4, e = 1 - Math.pow(1 - (f.t < IN ? f.t / IN : f.t < IN + HOLD ? 1 : Math.max(0, 1 - (f.t - IN - HOLD) / 0.35)), 3);
         const y = lerp(-110, 16, e);
@@ -780,10 +791,12 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
 
   // ================================================================= MENU
   const menuCatMem = {};   // where each cat was standing in the garden, so returning to the menu doesn't reset them
+  let menuIntroDone = false;          // the build-up animation plays once, right after the game loads
   SCREENS.menu = {
     enter() {
       const L = LEAGUES[SV.league - 1];
       drawBackground(SV.league);
+      const firstObj = OBJS.length;     // everything made after this is the interface (for the intro below)
       scr.logo = U('Logo', 350, 6, 120);
       scr.logoT = 0;
       const items = [['Start Heist', () => go('heist', { league: SV.league })],
@@ -861,6 +874,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
         }
       }
       scr.cats.forEach((c) => { c.hat = wearHat(c.id, c.o, 1.5); });
+      if (!menuIntroDone) { menuIntroDone = true; menuIntro(OBJS.slice(firstObj)); }
       if (!SV.tutorialOffered) {
         SV.tutorialOffered = true; save();
         const objs = [];
@@ -884,6 +898,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
       if (inside(p, 350, 6, 900, 250)) { scr.logoT = 0.8; sfx('alarm', 45, 0.05); }
     },
     update(ev, dt) {
+      if (scr.introT > 0) scr.introT -= dt;
       if (scr.lmx !== undefined && (ev.mx !== scr.lmx || ev.my !== scr.lmy)) {
         BTNS.forEach((B, i) => { if (i < scr.nMenu && inside({ x: ev.mx, y: ev.my }, B.x, B.y, B.w, B.h)) scr.focus = i; });
       }
@@ -918,9 +933,10 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
           continue;
         }
         if (c.state === 'walk') {
-          const d = Math.sign(c.tx - c.x);
-          c.x += d * 70 * dt;
-          if (Math.abs(c.tx - c.x) < 3 || c.t <= 0) { c.state = 'idle'; c.t = 2 + Math.random() * 4; anim(c.o, c.id + '_idle'); }
+          const step = (c.spd || 70) * dt;
+          if (Math.abs(c.tx - c.x) <= step) c.x = c.tx;            // land exactly on the spot (no overshoot jitter at speed)
+          else c.x += Math.sign(c.tx - c.x) * step;
+          if (Math.abs(c.tx - c.x) < 3 || c.t <= 0) { c.spd = 0; c.state = 'idle'; c.t = 2 + Math.random() * 4; anim(c.o, c.id + '_idle'); }
         } else if (c.t <= 0) {
           const r = Math.random();
           if (scr.modal) { c.t = 1; continue; }
@@ -936,6 +952,46 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
       scr.cats.forEach((c) => { syncHat(c.hat, c.o, c.face); menuCatMem[c.id] = { x: c.x, face: c.face }; });
     },
   };
+  // Intro: the game opens on the bare background, then the interface builds itself - the logo drops in and wobbles,
+  // the two cards swing in from the sides, the menu buttons slide up one by one, and the crew runs in. Any key or tap
+  // skips to the end.
+  function menuIntro(objs) {
+    const cats = new Set(); scr.cats.forEach((c) => { cats.add(c.o); if (c.hat) cats.add(c.hat); });
+    const fixed = new Set(scr.bossIcon ? [scr.bossIcon.o, scr.bossIcon.alert] : []);   // these bob on their own: fade only
+    const btnOf = new Map(); BTNS.forEach((B, i) => { for (const o of [B.b, B.t, B.coin]) if (o) btnOf.set(o, i); });
+    let end = 0;
+    for (const o of objs) {
+      if (cats.has(o) || (o.getZOrder && o.getZOrder() >= 180)) continue;     // cats run in; a pop-up stays put
+      const x = o.getX(), y = o.getY(), op = o.getOpacity ? o.getOpacity() : 255;
+      let delay, dx = 0, dy = 0, dur = 0.45, kind = 'slide';
+      if (o === scr.logo) { delay = 0.25; dy = -260; dur = 0.7; kind = 'drop'; }
+      else if (btnOf.has(o) && btnOf.get(o) < scr.nMenu) { delay = 0.8 + btnOf.get(o) * 0.07; dy = 46; }
+      else if (y < 250 || y > 800) { delay = 1.35; }                               // koban, sound button, version
+      else if (x < 560) { delay = 0.55; dx = -560; dur = 0.55; }                  // league card
+      else if (x >= 1040) { delay = 0.65; dx = 560; dur = 0.55; }                 // Endless card
+      else { delay = 0.8; dy = 46; }
+      if (fixed.has(o)) { dx = 0; dy = 0; }
+      o.setPosition(x + dx, y + dy); if (o.setOpacity) o.setOpacity(0);
+      (scr.fx = scr.fx || []).push({ kind: 'intro', ease: kind, o: o, t: -delay, x: x, y: y, dx: dx, dy: dy, dur: dur, op: op, fixed: fixed.has(o) });
+      end = Math.max(end, delay + dur);
+    }
+    // the crew scampers in from both edges of the garden
+    scr.cats.forEach((c, i) => {
+      const home = c.x, fromLeft = home < 800;
+      c.x = fromLeft ? -150 - i * 60 : 1700 + (4 - i) * 60; c.o.setPosition(c.x, c.y);
+      later(1.0 + i * 0.12, () => { c.tx = home; c.face = fromLeft ? 1 : -1; c.o.flipX(!fromLeft); c.state = 'walk'; c.spd = 420; c.t = 6; anim(c.o, c.id + '_walk'); });
+      c.state = 'wait'; c.t = 99;
+    });
+    later(0.25, () => sfx('jump', 45, 0, 0.6));
+    later(0.8, () => { sfx('slam', 35, 0, 1.5); scr.logoT = 0.6; });
+    later(0.55, () => sfx('jump', 35, 0, 0.8));
+    scr.introT = end;
+  }
+  function menuIntroSkip() {
+    scr.introSkip = true; scr.introT = 0;
+    const tm = scr.timers || []; scr.timers = []; tm.forEach((x) => x.fn());     // run the pending steps now (sounds, cats setting off)
+    scr.cats.forEach((c) => { if (c.state === 'walk' || c.state === 'wait') { c.x = c.tx != null ? c.tx : c.x; c.state = 'idle'; c.spd = 0; c.t = 1 + Math.random() * 2; anim(c.o, c.id + '_idle'); c.o.setPosition(c.x, c.y); } });
+  }
   function petCat(c) {
     if (c.state === 'hop') return;
     c.state = 'hop'; c.hop = 0; anim(c.o, c.id + '_jump');
@@ -3625,6 +3681,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     if (ev.esc && screen === 'heist' && G && G.mode === 'practice') { backToEditor(); return; }
     if (ev.esc && screen === 'heist' && G && G.mode === 'endless') { leaveHeist(); return; }
     if (ev.esc && screen !== 'menu') { go('menu'); return; }
+    if (screen === 'menu' && scr.introT > 0 && ev.any) menuIntroSkip();   // any key or tap finishes the build-up at once (and still counts)
     if (ev.tap) {
       if (inside(ev.tap, 10, 820, 72, 74) && scr.soundBtn) { toggleMute(); ev.tap = null; }
     }
@@ -3651,7 +3708,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
 
   applyMute();
   go('menu');
-  return { update: update, debug: () => ({ G: G, SV: SV, screen: screen, scr: scr, BTNS: BTNS, arrive: arrive, makeNoise: makeNoise, ninjaPath: ninjaPath, tryMove: tryMove, wakeDog: wakeDog, encodeLayout: encodeLayout, decodeLayout: decodeLayout, endlessLG: endlessLG, raiseAlarm: raiseAlarm }), go: go };
+  return { update: update, debug: () => ({ G: G, SV: SV, screen: screen, scr: scr, BTNS: BTNS, arrive: arrive, makeNoise: makeNoise, ninjaPath: ninjaPath, tryMove: tryMove, wakeDog: wakeDog, encodeLayout: encodeLayout, decodeLayout: decodeLayout, endlessLG: endlessLG, raiseAlarm: raiseAlarm, replayIntro: () => { menuIntroDone = false; } }), go: go };
 })(runtimeScene);
 runtimeScene.__neko.update();
 
@@ -3661,7 +3718,7 @@ gdjs.ManorCode.eventsList0 = function(runtimeScene) {
 {
 
 
-gdjs.ManorCode.userFunc0xa73040(runtimeScene);
+gdjs.ManorCode.userFunc0xb7b8f8(runtimeScene);
 
 }
 
