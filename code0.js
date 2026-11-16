@@ -71,7 +71,7 @@ gdjs.ManorCode.GDLabelObjects1= [];
 gdjs.ManorCode.GDWorldTextObjects1= [];
 
 
-gdjs.ManorCode.userFunc0x9a5b00 = function GDJSInlineCode(runtimeScene) {
+gdjs.ManorCode.userFunc0xb25ff8 = function GDJSInlineCode(runtimeScene) {
 "use strict";
 // ===================================================================
 //  NEKO HEIST (猫の大泥棒)
@@ -89,7 +89,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
   const CAT_SCALE = 1.2;
   const CAT_W = 84 * CAT_SCALE, CAT_H = 64 * CAT_SCALE;
   const SAVE_KEY = 'nekoHeist.save.v1';
-  const VERSION = 'v2.83';
+  const VERSION = 'v1.00';
   // Each league has its own look, dog count, trap mix, difficulty and pay.
   //   wake: a dog wakes when its noise meter reaches this.  dogStep: seconds between hunting steps.
   //   winsToNext: wins in this league needed to unlock the next one.
@@ -3591,7 +3591,7 @@ gdjs.ManorCode.eventsList0 = function(runtimeScene) {
 {
 
 
-gdjs.ManorCode.userFunc0x9a5b00(runtimeScene);
+gdjs.ManorCode.userFunc0xb25ff8(runtimeScene);
 
 }
 
