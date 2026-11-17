@@ -155,7 +155,7 @@ if (isConditionTrue_0) {
 }
 
 
-};gdjs.ManorCode.userFunc0xb4de88 = function GDJSInlineCode(runtimeScene) {
+};gdjs.ManorCode.userFunc0xc4b3b0 = function GDJSInlineCode(runtimeScene) {
 "use strict";
 // ===================================================================
 //  NEKO HEIST (猫の大泥棒)
@@ -208,7 +208,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     for (const sz of sizes) if (textHeight(str, sz, wrapW) <= maxH) { o.setCharacterSize(sz); return sz; }
     o.setCharacterSize(sizes[sizes.length - 1]); return sizes[sizes.length - 1];
   }
-  const VERSION = 'v3.07';
+  const VERSION = 'v1.00';
   // Each league has its own look, dog count, trap mix, difficulty and pay.
   //   wake: a dog wakes when its noise meter reaches this.  dogStep: seconds between hunting steps.
   //   winsToNext: wins in this league needed to unlock the next one.
@@ -593,8 +593,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
   }
 
   // ================================================================= sound
-  const SFX = 'assets/sfx/', AUD = '.m4a';    // AAC audio: plays natively on iPhone / iPad Safari as well as desktop browsers
-  const IOS = (() => { try { const ua = navigator.userAgent || ''; return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1); } catch (e) { return false; } })();
+  const SFX = 'assets/sfx/', AUD = '.mp3';
   let musicOn = false;
   function sfx(name, vol, pitchVar, pitch) {
     try {
@@ -603,40 +602,51 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     } catch (e) { }
   }
   // Music: channel 1 plays the league's ambient loop, channel 2 a taiko tension layer faded in when dogs are awake.
-  // iPhones and iPads ignore the volume of streamed music, so there the tension layer is started when a guard wakes and
-  // stopped when they all sleep instead of being faded (otherwise it would play at full volume the whole time).
-  // On iOS 17+ the audio session is also set to 'playback', so sound effects play even with the ringer switch on silent.
+  // Everything plays through Web Audio ("sounds"), music included: iPhone/iPad Safari ignores the volume of HTML5 audio,
+  // so streamed music there could not be faded, turned down by the slider or muted. The music files are loaded the first
+  // time they play, not all up front.
+  // iOS also only lets Web Audio make sound once it's been woken up inside a real tap: the first touch / click / key
+  // resumes the audio context, plays a silent blip, and sets the audio session to 'playback' (iOS 17+) so sounds still
+  // play with the ringer switch on silent.
   function iosAudio() { try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { } }
   iosAudio();
-  let musicTrack = '', tensionOn = false, tensionVol = 0, tensionPlaying = false;
+  (function unlockAudioOnGesture() {
+    let done = false;
+    const unlock = () => {
+      iosAudio();
+      try {
+        const ctx = typeof Howler !== 'undefined' && Howler.ctx;
+        if (ctx) {
+          if (ctx.state !== 'running' && ctx.resume) ctx.resume();
+          const src = ctx.createBufferSource(); src.buffer = ctx.createBuffer(1, 1, 22050); src.connect(ctx.destination); src.start(0);
+          if (ctx.state === 'running') done = true;
+        }
+      } catch (e) { }
+      if (done) ['touchend', 'touchstart', 'pointerup', 'mousedown', 'keydown'].forEach((ev) => document.removeEventListener(ev, unlock, true));
+    };
+    try { ['touchend', 'touchstart', 'pointerup', 'mousedown', 'keydown'].forEach((ev) => document.addEventListener(ev, unlock, true)); } catch (e) { }
+  })();
+  let musicTrack = '', tensionOn = false, tensionVol = 0;
   function startMusic() { iosAudio(); musicOn = true; musicFor(scr.amb ? scr.amb.league : SV.league); }
   function musicFor(league) {
     if (!musicOn) return;
     const f = SFX + 'ambient_l' + league + AUD;
     if (f === musicTrack) return;
     musicTrack = f;
-    try { gdjs.evtTools.sound.playMusicOnChannel(S, f, 1, true, 50 * SV.musicVol / 100, 1); } catch (e) { }
+    try { gdjs.evtTools.sound.playSoundOnChannel(S, f, 1, true, 50 * SV.musicVol / 100, 1); } catch (e) { }
   }
-  function applyMusicVol() { try { gdjs.evtTools.sound.setMusicOnChannelVolume(S, 1, 50 * SV.musicVol / 100); } catch (e) { } }
+  function applyMusicVol() { try { gdjs.evtTools.sound.setSoundOnChannelVolume(S, 1, 50 * SV.musicVol / 100); } catch (e) { } }
   function vibrate(ms) { if (!SV.vibrate) return; try { navigator.vibrate(ms); } catch (e) { } }
   function tension(on) {
     if (!musicOn) return;
-    if (on && !tensionOn) {
-      tensionOn = true; tensionVol = 0;
-      if (!IOS) { tensionPlaying = true; try { gdjs.evtTools.sound.playMusicOnChannel(S, SFX + 'tension' + AUD, 2, true, 0, 1); } catch (e) { } }
-    }
-    if (!on && tensionOn) { tensionOn = false; if (tensionPlaying) { tensionPlaying = false; try { gdjs.evtTools.sound.stopMusicOnChannel(S, 2); } catch (e) { } } }
+    if (on && !tensionOn) { tensionOn = true; tensionVol = 0; try { gdjs.evtTools.sound.playSoundOnChannel(S, SFX + 'tension' + AUD, 2, true, 0, 1); } catch (e) { } }
+    if (!on && tensionOn) { tensionOn = false; try { gdjs.evtTools.sound.stopSoundOnChannel(S, 2); } catch (e) { } }
   }
   function tensionTo(target, dt) {
     if (!tensionOn) return;
     target = target * SV.musicVol / 100;
-    if (IOS) {                       // no volume control: on while a guard is up, off when everyone sleeps
-      if (target > 0 && !tensionPlaying) { tensionPlaying = true; try { gdjs.evtTools.sound.playMusicOnChannel(S, SFX + 'tension' + AUD, 2, true, target, 1); } catch (e) { } }
-      else if (target <= 0 && tensionPlaying) { tensionPlaying = false; try { gdjs.evtTools.sound.stopMusicOnChannel(S, 2); } catch (e) { } }
-      return;
-    }
     const v = tensionVol + Math.sign(target - tensionVol) * Math.min(Math.abs(target - tensionVol), 60 * dt);
-    if (Math.abs(v - tensionVol) > 0.5 || v === target) { tensionVol = v; try { gdjs.evtTools.sound.setMusicOnChannelVolume(S, 2, v); } catch (e) { } }
+    if (Math.abs(v - tensionVol) > 0.5 || v === target) { tensionVol = v; try { gdjs.evtTools.sound.setSoundOnChannelVolume(S, 2, v); } catch (e) { } }
   }
   let unfocused = false;
   function applyMute() { try { gdjs.evtTools.sound.setGlobalVolume(S, SV.muted || unfocused ? 0 : 100); } catch (e) { } }
@@ -3865,7 +3875,7 @@ gdjs.ManorCode.eventsList1 = function(runtimeScene) {
 
 let isConditionTrue_0 = false;
 isConditionTrue_0 = false;
-{isConditionTrue_0 = runtimeScene.getOnceTriggers().triggerOnce(12731388);
+{isConditionTrue_0 = runtimeScene.getOnceTriggers().triggerOnce(10923892);
 }
 if (isConditionTrue_0) {
 
@@ -3879,7 +3889,7 @@ gdjs.ManorCode.eventsList0(runtimeScene);} //End of subevents
 {
 
 
-gdjs.ManorCode.userFunc0xb4de88(runtimeScene);
+gdjs.ManorCode.userFunc0xc4b3b0(runtimeScene);
 
 }
 
