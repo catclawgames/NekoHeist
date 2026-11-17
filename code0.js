@@ -157,7 +157,7 @@ if (isConditionTrue_0) {
 }
 
 
-};gdjs.ManorCode.userFunc0xe0f258 = function GDJSInlineCode(runtimeScene) {
+};gdjs.ManorCode.userFunc0xc8a220 = function GDJSInlineCode(runtimeScene) {
 "use strict";
 // ===================================================================
 //  NEKO HEIST (猫の大泥棒)
@@ -210,7 +210,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
     for (const sz of sizes) if (textHeight(str, sz, wrapW) <= maxH) { o.setCharacterSize(sz); return sz; }
     o.setCharacterSize(sizes[sizes.length - 1]); return sizes[sizes.length - 1];
   }
-  const VERSION = 'v3.21';
+  const VERSION = 'v1.00';
   // Each league has its own look, dog count, trap mix, difficulty and pay.
   //   wake: a dog wakes when its noise meter reaches this.  dogStep: seconds between hunting steps.
   //   winsToNext: wins in this league needed to unlock the next one.
@@ -3959,7 +3959,7 @@ gdjs.ManorCode.eventsList0(runtimeScene);} //End of subevents
 {
 
 
-gdjs.ManorCode.userFunc0xe0f258(runtimeScene);
+gdjs.ManorCode.userFunc0xc8a220(runtimeScene);
 
 }
 
