@@ -157,7 +157,7 @@ if (isConditionTrue_0) {
 }
 
 
-};gdjs.ManorCode.userFunc0x9c31e0 = function GDJSInlineCode(runtimeScene) {
+};gdjs.ManorCode.userFunc0xbcf460 = function GDJSInlineCode(runtimeScene) {
 "use strict";
 // ===================================================================
 //  NEKO HEIST (猫の大泥棒)
@@ -215,20 +215,20 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
   //   wake: a dog wakes when its noise meter reaches this.  dogStep: seconds between hunting steps.
   //   winsToNext: wins in this league needed to unlock the next one.
   const LEAGUES = [
-    { n: 1, name: 'Bamboo League', short: 'Bamboo', place: 'a countryside manor', dogs: 7, wake: 3.0, dogStep: 0.85, koban: 1.0, winsForBoss: 8,
+    { n: 1, name: 'Bamboo League', short: 'Bamboo', place: 'a countryside manor', dogs: 7, wake: 3.0, dogStep: 0.85, koban: 1.0, winsForBoss: 6,
       boss: { name: "The Elder's Manor", grid: ['D.S.N.D', '.BSPN..', 'S.BV.SD', '..DNB.B', '.S...D.'] },
       traps: ['squeak', 'squeak', 'squeak', 'bell', 'bell', 'bell', 'net', 'net', 'net'],
       rooms: ['wave', 'shoji', 'scroll', 'bamboo', 'crane'], intro: 'Traps: nightingale floors, bell strings, nets.' },
-    { n: 2, name: 'Sakura League', short: 'Sakura', place: "a merchant's spring estate", dogs: 8, wake: 2.8, dogStep: 0.75, koban: 1.5, winsForBoss: 9,
+    { n: 2, name: 'Sakura League', short: 'Sakura', place: "a merchant's spring estate", dogs: 8, wake: 2.8, dogStep: 0.75, koban: 1.5, winsForBoss: 7,
       boss: { name: "The Merchant Princess's Estate", grid: ['L.D.P.L', '.CLPL..', 'DSCVDCD', '..NDN..', 'B..O..S'] },
       traps: ['squeak', 'squeak', 'bell', 'bell', 'net', 'lantern', 'lantern', 'caltrops', 'caltrops', 'owl'],
       rooms: ['sakura', 'wisteria', 'shoji', 'scroll', 'wave'], intro: 'New: watch lanterns, caltrops and a watchful owl.' },
-    { n: 3, name: 'Snow League', short: 'Snow', place: "the shogun's winter castle", dogs: 9, wake: 2.6, dogStep: 0.68, koban: 2.0, winsForBoss: 5,
+    { n: 3, name: 'Snow League', short: 'Snow', place: "the shogun's winter castle", dogs: 9, wake: 2.6, dogStep: 0.68, koban: 2.0, winsForBoss: 8,
       boss: { name: "The Shogun's Keep", grid: ['G.LVK.G', 'P.GPT.T', 'D.C.G.D', '.L.P.L.', 'S.D.D.S'] },
       winsToNext: 0,
       traps: ['squeak', 'squeak', 'bell', 'net', 'lantern', 'caltrops', 'gong', 'gong', 'trapdoor', 'trapdoor', 'owl'], samurai: 2,
       rooms: ['goldpine', 'armor', 'shoji', 'scroll', 'crane'], intro: 'New: gongs, trapdoors and samurai guards.' },
-    { n: 4, name: 'Matsuri League', short: 'Matsuri', place: 'a summer-festival teahouse', dogs: 9, wake: 2.5, dogStep: 0.64, koban: 2.5, winsForBoss: 6,
+    { n: 4, name: 'Matsuri League', short: 'Matsuri', place: 'a summer-festival teahouse', dogs: 9, wake: 2.5, dogStep: 0.64, koban: 2.5, winsForBoss: 9,
       boss: { name: "The Festival Lord's Teahouse", grid: ['F.JCVLF', '.L.FPJ.', 'D.F.C.J', '.T.L.T.', 'S.J.D.B'] },
       traps: ['squeak', 'bell', 'net', 'lantern', 'caltrops', 'gong', 'trapdoor', 'owl', 'firecracker', 'firecracker', 'firecracker'], samurai: 1, ninja: 2,
       rooms: ['festival', 'goldfish', 'fireworks', 'shoji', 'wave'], intro: 'New: firecrackers and ninja who climb between floors.' },
@@ -2814,7 +2814,7 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
           if (d.seen && G.t - (G.disturbMsg || -9) > 4) { G.disturbMsg = G.t; say((d.kind === 'dog' ? 'A guard dog' : d.kind === 'samurai' ? 'A samurai' : 'A ninja') + ' is getting restless...', 'stuck'); }
         }
       }
-      else if (d.r === r) d.awakeT = Math.max(d.awakeT, 5.2 * awakeMul(d));
+      else if (d.r === r) d.awakeT = Math.max(d.awakeT, 6 * awakeMul(d));
     }
   }
 
@@ -2878,14 +2878,14 @@ if (!runtimeScene.__neko) runtimeScene.__neko = (function (S) {
   const VAULT_TICK = 0.85, VAULT_OPEN = 2.3;   // cracking makes a tick of noise every 0.5s; the door swinging open is louder
   // Disturbed sleep: a sleeping guard that keeps hearing noise without ever waking (e.g. a spotlight going off again and
   // again by the vault) eventually sleeps fitfully - its bubble turns jagged and the next real sound wakes it.
-  const DISTURB_AT = 3.5, DISTURB_FADE = 0.04, DISTURB_WAKE = 0.12;   // x its wake level heard; fade/s; smallest sound that wakes it
+  const DISTURB_AT = 3.0, DISTURB_FADE = 0.04, DISTURB_WAKE = 0.12;   // x its wake level heard; fade/s; smallest sound that wakes it
   const DISTURB_START = 2.5;        // seconds of restless warning (normal bubble rules, '?' bubble shown) before disturbed sleep sets in
-  const LOST_SIGHT = 3.3;          // seconds an awake guard keeps hunting after losing sight of a cat, before heading home
+  const LOST_SIGHT = 4;          // seconds an awake guard keeps hunting after losing sight of a cat, before heading home
   function awakeMul(d) { return d.kind === 'samurai' || d.kind === 'ninja' ? 1.2 : 1; }   // they stay alert 1.2x longer than dogs
   function wakeAt(d) { return G.LG.wake * (d.kind === 'samurai' ? 2 : 1); }
   function wakeDog(d) {
     d.disturbed = false; d.heard = 0; d.restlessT = null;
-    d.state = 'awake'; d.alertT = 0.9; d.awakeT = 8 * awakeMul(d); d.meter = 0; d.stepT = 0;
+    d.state = 'awake'; d.alertT = 0.9; d.awakeT = 9 * awakeMul(d); d.meter = 0; d.stepT = 0;
     if (!G.practice) stat('dogsWoken');
     anim(d.obj, 'awake');
     if (d.obj.setAnimationSpeedScale) d.obj.setAnimationSpeedScale(1);
@@ -3945,7 +3945,7 @@ gdjs.ManorCode.eventsList1 = function(runtimeScene) {
 
 let isConditionTrue_0 = false;
 isConditionTrue_0 = false;
-{isConditionTrue_0 = runtimeScene.getOnceTriggers().triggerOnce(13561452);
+{isConditionTrue_0 = runtimeScene.getOnceTriggers().triggerOnce(9164076);
 }
 if (isConditionTrue_0) {
 
@@ -3959,7 +3959,7 @@ gdjs.ManorCode.eventsList0(runtimeScene);} //End of subevents
 {
 
 
-gdjs.ManorCode.userFunc0x9c31e0(runtimeScene);
+gdjs.ManorCode.userFunc0xbcf460(runtimeScene);
 
 }
 
