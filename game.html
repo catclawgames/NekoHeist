@@ -3121,8 +3121,12 @@ let quitChecked=false;
 function applyQuitPenalty(){if(quitChecked||MODE!=='hub'||TEST_HEIST||REPLAY)return;quitChecked=true;const m=prog.get('heistInProgress',null);if(!m)return;
   prog.set('heistInProgress',null);const loss=Math.min(-1,Math.round((typeof m.d==='number'?m.d:-2)*QUIT_MUL)),oldL=LEAGUE;RANK=Math.max(0,RANK+loss);saveProg();try{refreshLeagueUI()}catch(e){}
   // dropped below the league: play the league-change scene (same as losing rank to raids), then show the notice once home
-  const L2=leagueOf(RANK);if(L2.n!==oldL.n&&!trans){prog.set('pendingLeague',{from:oldL.n,to:L2.n});SS.setItem('quitNotice',JSON.stringify({opp:m.opp,loss}));location.hash='home';location.reload();return}
+  const L2=leagueOf(RANK);if(L2.n!==oldL.n){SS.setItem('quitNotice',JSON.stringify({opp:m.opp,loss}));playLeagueChange(oldL.n,L2.n);return}
   showQuitNotice(m.opp,loss)}
+// a league change that happens on the home screen (raid results, abandoned-heist penalty): play the league scene as soon as the hub is
+// free - not during a transition, in Security/Market or with a window open - instead of silently updating the badge
+function playLeagueChange(from,to){prog.set('pendingLeague',{from,to});
+  const go=()=>{if(MODE!=='hub'||trans||modalOpen||finding||document.getElementById('title')){setTimeout(go,400);return}location.hash='home';location.reload()};go()}
 function showQuitNotice(opp,loss){
   const show=()=>{if(document.getElementById('title')||modalOpen||trans){setTimeout(show,400);return}
     openPanel('Heist abandoned',`<p>You left your last heist${opp?` on <b>${opp}'s</b> manor`:''} before it finished.</p><p class="muted">Leaving a heist early costs 1.5× the rank a loss would have, because the defender doesn't get the replay or their points.</p><p style="font:900 22px system-ui;color:#ff8a7a;text-align:center;margin:10px 0 0">${loss} rank</p>`)};
@@ -3299,7 +3303,7 @@ async function loadRaids(){if(!ONLINE||!MYID)return;try{const snap=await ONLINE.
   const seen=new Set(prog.get('seenRaids',[]));let delta=0,fresh=0;for(const r of RAIDS){if(seen.has(r.id))continue;seen.add(r.id);fresh++;delta+=defDelta(r)}
   if(fresh){prog.set('seenRaids',[...seen].slice(-300));prog.set('unreadRaids',(prog.get('unreadRaids',0)|0)+fresh);
     const oldL=LEAGUE;RANK=Math.max(0,RANK+delta);BEST=Math.max(BEST,RANK);saveProg();const L2=leagueOf(RANK);
-    if(L2.n!==oldL.n&&MODE==='hub'&&!trans){prog.set('pendingLeague',{from:oldL.n,to:L2.n});location.hash='home';location.reload();return}
+    if(L2.n!==oldL.n)playLeagueChange(oldL.n,L2.n);
     refreshLeagueUI();toast(delta>=0?`Your base held off ${fresh>1?'raids':'a raid'}! +${delta} rank`:`You were robbed! ${delta} rank`)}
   const extra=RAIDS.slice(RAID_KEEP_MAX);RAIDS=RAIDS.slice(0,RAID_KEEP_MAX);
   for(const r of [...expired,...extra].slice(0,60)){try{Promise.resolve(ONLINE.doc('raids/'+r.id).delete()).catch(()=>{})}catch(e){}}
