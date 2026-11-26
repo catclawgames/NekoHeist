@@ -3141,7 +3141,9 @@ function renderAccount(){const row=document.getElementById('acctRow');if(!row)re
     const b=document.createElement('button');b.className='btn ghost';b.textContent='Sign out';b.onclick=async()=>{if(Date.now()-signOutArm>3000){signOutArm=Date.now();b.textContent='Tap again';return}
       csPush(true);try{await FB.mods.auth.signOut(FB.auth)}catch(e){}try{const keep=new Set(['settings']);for(const k of Object.keys(localStorage))if(!keep.has(k))localStorage.removeItem(k)}catch(e){}location.reload()};box.appendChild(b)}
   sp.appendChild(sm);row.appendChild(sp);row.appendChild(box);
-  // store rules (App Store / Google Play): players who can make an account must be able to delete it from inside the app
+  // store rules (App Store / Google Play): players who can make an account must be able to delete it from inside the app.
+  // Only the phone-app builds show it; the website and itch.io profiles just have sign in / sign out
+  if(!isNativeApp()){const dl=document.getElementById('acctDel');if(dl)dl.remove();return}
   let del=document.getElementById('acctDel');if(!del){del=document.createElement('div');del.id='acctDel';del.className='acctDel';row.after(del)}del.innerHTML='';
   const db=document.createElement('button');db.textContent='Delete my account and data';let arm=0;db.onclick=async()=>{if(Date.now()-arm>3000){arm=Date.now();db.textContent='Tap again to permanently delete';return}db.disabled=true;db.textContent='Deleting…';await deleteAccount(db)};del.appendChild(db)}
 async function deleteAccount(btn){const A=FB.mods.auth,u=FB.auth.currentUser;if(!u)return;
