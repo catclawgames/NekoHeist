@@ -12,19 +12,15 @@ d.textContent+=(d.textContent?'\n':'')+String(e.message||e.error)+' @'+(e.lineno
 var SAVE_EPOCH=2;try{if(localStorage.getItem('saveEpoch')!==String(SAVE_EPOCH)){for(const k of Object.keys(localStorage))if(k!=='settings'&&!k.startsWith('firebase'))localStorage.removeItem(k);localStorage.setItem('saveEpoch',String(SAVE_EPOCH))}}catch(e){}
 var SS=(()=>{const mk=st=>({getItem:k=>{try{return st.getItem(k)}catch(e){return null}},setItem:(k,v)=>{try{st.setItem(k,v)}catch(e){}},removeItem:k=>{try{st.removeItem(k)}catch(e){}}});try{sessionStorage.setItem('__t','1');sessionStorage.removeItem('__t');return mk(sessionStorage)}catch(e){}try{const L=localStorage,p='ss_';return{getItem:k=>{try{return L.getItem(p+k)}catch(e){return null}},setItem:(k,v)=>{try{L.setItem(p+k,v)}catch(e){}},removeItem:k=>{try{L.removeItem(p+k)}catch(e){}}}}catch(e){}const m={};return{getItem:k=>k in m?m[k]:null,setItem:(k,v)=>{m[k]=String(v)},removeItem:k=>{delete m[k]}}})();
 if(location.hash==='#home'||location.hash==='#heist'||location.hash==='#test'||location.hash==='#replay')document.documentElement.className='booting'+(location.hash==='#home'?' tx-home':' tx-heist')</script>
-<script>/* Software-canvas fallback. Some Macs (a struggling GPU process) hand back offscreen canvases that stay blank, which hides the manor,
-   road and portraits. If a probe shows that, or ?cpu=1 is in the address, every canvas except the main one is kept in normal memory instead. */
+<script>/* Software-canvas mode, only when asked for with ?cpu=1 in the address: every canvas except the main one is kept in normal memory
+   instead of on the graphics chip (for Macs whose graphics process hands back blank canvases). There is deliberately no automatic test:
+   reading pixels back from a stuck graphics process can freeze the page. */
 (function(){var q='';try{q=location.search+(window.parent!==window?window.parent.location.search:'')}catch(e){q=location.search}
-  var on=/[?&]cpu=1/.test(q);try{if(/[?&]cpu=0/.test(q))localStorage.removeItem('__cpuCanvas');else if(localStorage.getItem('__cpuCanvas')==='1')on=true}catch(e){}
-  if(!on){try{var a=document.createElement('canvas');a.width=a.height=256;var x=a.getContext('2d');x.fillStyle='#f00';x.fillRect(0,0,256,256);
-    var b=document.createElement('canvas');b.width=b.height=4;var y=b.getContext('2d',{willReadFrequently:true});y.drawImage(a,0,0,256,256,0,0,4,4);
-    if(y.getImageData(1,1,1,1).data[3]<200)on=true;a.width=a.height=b.width=b.height=0}catch(e){}}
-  window.CPU_CANVAS=on;if(!on)return;
+  try{localStorage.removeItem('__cpuCanvas')}catch(e){}   // left behind by the short-lived automatic check
+  var on=/[?&]cpu=1/.test(q);window.CPU_CANVAS=on;if(!on)return;
   var g=HTMLCanvasElement.prototype.getContext;
   HTMLCanvasElement.prototype.getContext=function(t,o){if(t==='2d'&&this.id!=='c'&&this.id!=='tc'){o=Object.assign({willReadFrequently:true},o||{})}return g.call(this,t,o)};
 })();
-/* called once the manor is cut into tiles: if a tile that must have pixels reads back empty, switch to software canvases and reload once */
-function canvasHealthCheck(cv,x,y){if(window.CPU_CANVAS)return;try{var d=cv.getContext('2d').getImageData(x|0,y|0,1,1).data;if(d[3]===0){try{localStorage.setItem('__cpuCanvas','1')}catch(e){}if(localStorage.getItem('__cpuCanvas')==='1')location.reload()}}catch(e){}}
 </script>
 <meta charset="utf-8">
 <script>
@@ -788,7 +784,7 @@ let manorTiles=null,manorTilesOf=null;
 function freeManor(){if(manorTiles)for(const t of manorTiles){t.cv.width=t.cv.height=0}manorTiles=null;manorTilesOf=null;if(manor){manor.width=manor.height=0}}
 function drawManorTiles(c,vx0,vx1){if(manorTilesOf!==manor){manorTilesOf=manor;manorTiles=[];manorTiles.W=manor.width;const TS=1024;
     const P=4; // each tile carries a few pixels of its neighbours so edges overlap at the exact same scale (no stretched seams)
-    for(let y=0;y<manor.height;y+=TS)for(let x=0;x<manor.width;x+=TS){const x0=Math.max(0,x-P),y0=Math.max(0,y-P),x1=Math.min(manor.width,x+TS+P),y1=Math.min(manor.height,y+TS+P),w=x1-x0,h=y1-y0,cv=mk(w,h);cv.getContext('2d').drawImage(manor,x0,y0,w,h,0,0,w,h);manorTiles.push({cv,x:x0,y:y0,w,h})}manor.width=manor.height=1;manorProbe()}
+    for(let y=0;y<manor.height;y+=TS)for(let x=0;x<manor.width;x+=TS){const x0=Math.max(0,x-P),y0=Math.max(0,y-P),x1=Math.min(manor.width,x+TS+P),y1=Math.min(manor.height,y+TS+P),w=x1-x0,h=y1-y0,cv=mk(w,h);cv.getContext('2d').drawImage(manor,x0,y0,w,h,0,0,w,h);manorTiles.push({cv,x:x0,y:y0,w,h})}manor.width=manor.height=1}
   const k=BW/manorTiles.W,vy0=cam.y-SHh/2/cam.z-10,vy1=cam.y+SHh/2/cam.z+10;
   const q0=c.imageSmoothingQuality;if(k*cam.z*dpr>1)c.imageSmoothingQuality='low';   // magnifying: 'high' quality filtering costs a lot and adds nothing
   for(const t of manorTiles){const wx=BX0+t.x*k,wy=BY0+t.y*k,ww=t.w*k,wh=t.h*k;if(wx>vx1||wx+ww<vx0||wy>vy1||wy+wh<vy0)continue;
@@ -796,7 +792,6 @@ function drawManorTiles(c,vx0,vx1){if(manorTilesOf!==manor){manorTilesOf=manor;m
     const x0=Math.max(wx,vx0),x1=Math.min(wx+ww,vx1),y0=Math.max(wy,vy0),y1=Math.min(wy+wh,vy1),sx=Math.max(0,Math.floor((x0-wx)/k)),sy=Math.max(0,Math.floor((y0-wy)/k)),sw=Math.min(t.w-sx,Math.ceil((x1-wx)/k)-sx+1),sh=Math.min(t.h-sy,Math.ceil((y1-wy)/k)-sy+1);
     if(sw>0&&sh>0)c.drawImage(t.cv,sx,sy,sw,sh,wx+sx*k,wy+sy*k,sw*k,sh*k)}
   c.imageSmoothingQuality=q0}
-function manorProbe(){const k=manorTiles.W/BW,px=(W/2-BX0)*k,py=(-BASE_H/2-BY0)*k;for(const t of manorTiles)if(px>=t.x&&px<t.x+t.w&&py>=t.y&&py<t.y+t.h){canvasHealthCheck(t.cv,px-t.x,py-t.y);break}}
 function buildManor(){
   seed=1337;
   manor=mk(BW*RES,BH*RES);const m=manor.getContext('2d');
