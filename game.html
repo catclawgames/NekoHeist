@@ -486,7 +486,13 @@ function R(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|see
 function shade(hex,a){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;const t=a<0?0:255,p=Math.abs(a);
   r=Math.round(r+(t-r)*p);g=Math.round(g+(t-g)*p);b=Math.round(b+(t-b)*p);return`rgb(${r},${g},${b})`}
 function rr(m,x,y,w,h,r){m.beginPath();if(m.roundRect)m.roundRect(x,y,w,h,r);else m.rect(x,y,w,h)}
-function mk(w,h){const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w));c.height=Math.max(1,Math.ceil(h));return c}
+const BIG_CANVASES=[];   // every sizeable offscreen canvas, so they can all be handed back when the scene reloads
+function mk(w,h){const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w));c.height=Math.max(1,Math.ceil(h));if(c.width*c.height>=65536){BIG_CANVASES.push(c);if(BIG_CANVASES.length>400)BIG_CANVASES.splice(0,BIG_CANVASES.length-400)}return c}
+// the game reloads its page between scenes. Safari only releases the old page's canvas memory when it gets round to garbage collection, so
+// several scenes' worth can pile up and, on a Mac whose graphics memory is under pressure, the next scene fails to load (stuck blue screen).
+// Shrinking every canvas to nothing as the page goes away gives that memory back immediately.
+addEventListener('pagehide',()=>{try{for(const c of BIG_CANVASES)c.width=c.height=0;BIG_CANVASES.length=0;for(const c of document.querySelectorAll('canvas'))c.width=c.height=0}catch(e){}});
+addEventListener('pageshow',e=>{if(e.persisted)location.reload()});   // brought back from the back/forward cache with its canvases already emptied: rebuild
 function strokeOut(m,lw){m.lineWidth=lw||3;m.strokeStyle=OUT;m.lineJoin='round';m.stroke()}
 
 function wood(m,x,y,w,h,col,dir){ // dir 'v' or 'h'
