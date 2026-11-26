@@ -12,6 +12,20 @@ d.textContent+=(d.textContent?'\n':'')+String(e.message||e.error)+' @'+(e.lineno
 var SAVE_EPOCH=2;try{if(localStorage.getItem('saveEpoch')!==String(SAVE_EPOCH)){for(const k of Object.keys(localStorage))if(k!=='settings'&&!k.startsWith('firebase'))localStorage.removeItem(k);localStorage.setItem('saveEpoch',String(SAVE_EPOCH))}}catch(e){}
 var SS=(()=>{const mk=st=>({getItem:k=>{try{return st.getItem(k)}catch(e){return null}},setItem:(k,v)=>{try{st.setItem(k,v)}catch(e){}},removeItem:k=>{try{st.removeItem(k)}catch(e){}}});try{sessionStorage.setItem('__t','1');sessionStorage.removeItem('__t');return mk(sessionStorage)}catch(e){}try{const L=localStorage,p='ss_';return{getItem:k=>{try{return L.getItem(p+k)}catch(e){return null}},setItem:(k,v)=>{try{L.setItem(p+k,v)}catch(e){}},removeItem:k=>{try{L.removeItem(p+k)}catch(e){}}}}catch(e){}const m={};return{getItem:k=>k in m?m[k]:null,setItem:(k,v)=>{m[k]=String(v)},removeItem:k=>{delete m[k]}}})();
 if(location.hash==='#home'||location.hash==='#heist'||location.hash==='#test'||location.hash==='#replay')document.documentElement.className='booting'+(location.hash==='#home'?' tx-home':' tx-heist')</script>
+<script>/* Software-canvas fallback. Some Macs (a struggling GPU process) hand back offscreen canvases that stay blank, which hides the manor,
+   road and portraits. If a probe shows that, or ?cpu=1 is in the address, every canvas except the main one is kept in normal memory instead. */
+(function(){var q='';try{q=location.search+(window.parent!==window?window.parent.location.search:'')}catch(e){q=location.search}
+  var on=/[?&]cpu=1/.test(q);try{if(/[?&]cpu=0/.test(q))localStorage.removeItem('__cpuCanvas');else if(localStorage.getItem('__cpuCanvas')==='1')on=true}catch(e){}
+  if(!on){try{var a=document.createElement('canvas');a.width=a.height=256;var x=a.getContext('2d');x.fillStyle='#f00';x.fillRect(0,0,256,256);
+    var b=document.createElement('canvas');b.width=b.height=4;var y=b.getContext('2d',{willReadFrequently:true});y.drawImage(a,0,0,256,256,0,0,4,4);
+    if(y.getImageData(1,1,1,1).data[3]<200)on=true;a.width=a.height=b.width=b.height=0}catch(e){}}
+  window.CPU_CANVAS=on;if(!on)return;
+  var g=HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext=function(t,o){if(t==='2d'&&this.id!=='c'&&this.id!=='tc'){o=Object.assign({willReadFrequently:true},o||{})}return g.call(this,t,o)};
+})();
+/* called once the manor is cut into tiles: if a tile that must have pixels reads back empty, switch to software canvases and reload once */
+function canvasHealthCheck(cv,x,y){if(window.CPU_CANVAS)return;try{var d=cv.getContext('2d').getImageData(x|0,y|0,1,1).data;if(d[3]===0){try{localStorage.setItem('__cpuCanvas','1')}catch(e){}if(localStorage.getItem('__cpuCanvas')==='1')location.reload()}}catch(e){}}
+</script>
 <meta charset="utf-8">
 <script>
 /* ===== Firebase settings for the website / app builds =====
@@ -32,7 +46,7 @@ window.NEKO_FIREBASE = null;
   html.uiBuild .ub{animation:ubIn .55s cubic-bezier(.25,1.55,.45,1) both;animation-delay:var(--d,0s)}
   @keyframes ubIn{0%{opacity:0;transform:translate(var(--fx,0px),var(--fy,24px)) scale(.55) rotate(var(--fr,0deg))}60%{opacity:1}100%{opacity:1;transform:none}}
   #tc{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:18}  /* the circle transition, above every button */
-  html.uilock #hubTop,html.uilock #hubTop *,html.uilock #hubLeft,html.uilock #hubLeft *,html.uilock #hubUI,html.uilock #hubUI *{pointer-events:none!important}
+  html.uilock #hubTop,html.uilock #hubTop *,html.uilock #hubLeft,html.uilock #hubLeft *,html.uilock #hubUI,html.uilock #hubUI *,html.uilock #secBar,html.uilock #secBar *,html.uilock #secTray,html.uilock #secTray *,html.uilock #secTest{pointer-events:none!important}
   .corner{position:fixed;bottom:0;border:3px solid #17120e;padding:0;margin:0;background:linear-gradient(160deg,#7a5530,#4e341b);
     box-shadow:inset 0 3px 0 rgba(255,220,160,.25),inset 0 -4px 0 rgba(0,0,0,.25);color:#f3e2b8;font:800 12px system-ui,-apple-system,sans-serif;letter-spacing:.5px;z-index:3}
   .corner.left{left:0;border-left:0;border-bottom:0;border-top-right-radius:100%}
@@ -301,7 +315,12 @@ const SFX_FACTORY=()=>{const sr=Math.random.bind(Math);let ac=null,master,sfxG,m
     revGain=ac.createGain();revGain.gain.value=.35;revGain.connect(dl);sfxRev=ac.createGain();sfxRev.connect(revGain);musRev=ac.createGain();musRev.gain.value=0;musRev.connect(revGain);dl.connect(lp);lp.connect(fb);fb.connect(dl);lp.connect(master);
     noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=sr()*2-1;apply();if(document.hidden||(!matchMedia('(pointer:coarse)').matches&&!document.hasFocus()))master.gain.value=0}
   // any tap/key: make sure audio is running (iOS leaves it 'interrupted' or 'suspended' after switching apps/tabs) and unmuted
-  function unlock(){init();if(ac&&ac.state!=='running'){try{ac.resume()}catch(e){}}startMusic();if(ac&&!document.hidden)focusMute(false)}
+  // phones: after the tab/app was hidden, iOS can leave the context 'interrupted' or even 'running' but silent for good. The engine now
+  // outlives scene reloads, so nothing would ever replace it: on the first tap after coming back, build a fresh context instead
+  let backFromHidden=false;
+  function rebuild(){const old=ac;ac=null;try{old.close()}catch(e){}init();if(ac&&musicOn)nextT=ac.currentTime+.2}
+  function unlock(){if(ac&&backFromHidden&&!document.hidden){backFromHidden=false;if(matchMedia('(pointer:coarse)').matches)rebuild()}
+    init();if(ac&&ac.state!=='running'){try{ac.resume()}catch(e){}}startMusic();if(ac&&!document.hidden)focusMute(false)}
   ['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,unlock,{capture:true}));
   function apply(){if(!ac)return;const sn=st().sound?1:0,mu=st().music?1:0;sfxG.gain.setTargetAtTime(sn,ac.currentTime,.05);sfxRev.gain.setTargetAtTime(sn,ac.currentTime,.05);musG.gain.setTargetAtTime(mu*.32,ac.currentTime,.15);musRev.gain.setTargetAtTime(mu,ac.currentTime,.15)}
   const ok=()=>ac&&st().sound&&ac.state==='running';
@@ -411,7 +430,7 @@ const SFX_FACTORY=()=>{const sr=Math.random.bind(Math);let ac=null,master,sfxG,m
   // mute everything while the tab/window isn't focused (a quick ramp, so it doesn't click)
   function focusMute(off){if(!ac)return;const t=ac.currentTime;master.gain.cancelScheduledValues(t);master.gain.setValueAtTime(master.gain.value,t);master.gain.linearRampToValueAtTime(off?0:.8,t+(off?.08:.25))}
   // hidden tab = muted. Losing focus mutes on desktop only: phones often don't report focus coming back until the next tap
-  const coarse=matchMedia('(pointer:coarse)').matches,syncFocus=()=>{if(ac&&!document.hidden&&ac.state!=='running'){try{ac.resume()}catch(e){}}focusMute(document.hidden||(!coarse&&!document.hasFocus()))};
+  const coarse=matchMedia('(pointer:coarse)').matches,syncFocus=()=>{if(document.hidden)backFromHidden=true;if(ac&&!document.hidden&&ac.state!=='running'){try{ac.resume()}catch(e){}}focusMute(document.hidden||(!coarse&&!document.hasFocus()))};
   addEventListener('blur',syncFocus);addEventListener('focus',syncFocus);document.addEventListener('visibilitychange',syncFocus);addEventListener('pageshow',syncFocus);
   return{play,apply,unlock,fadeMusic,syncFocus}};
 const SFX=(()=>{try{const P=window.parent;if(P!==window&&P.NEKO_SHELL){   // hosted: one audio engine in the shell survives every reload of the game
@@ -769,7 +788,7 @@ let manorTiles=null,manorTilesOf=null;
 function freeManor(){if(manorTiles)for(const t of manorTiles){t.cv.width=t.cv.height=0}manorTiles=null;manorTilesOf=null;if(manor){manor.width=manor.height=0}}
 function drawManorTiles(c,vx0,vx1){if(manorTilesOf!==manor){manorTilesOf=manor;manorTiles=[];manorTiles.W=manor.width;const TS=1024;
     const P=4; // each tile carries a few pixels of its neighbours so edges overlap at the exact same scale (no stretched seams)
-    for(let y=0;y<manor.height;y+=TS)for(let x=0;x<manor.width;x+=TS){const x0=Math.max(0,x-P),y0=Math.max(0,y-P),x1=Math.min(manor.width,x+TS+P),y1=Math.min(manor.height,y+TS+P),w=x1-x0,h=y1-y0,cv=mk(w,h);cv.getContext('2d').drawImage(manor,x0,y0,w,h,0,0,w,h);manorTiles.push({cv,x:x0,y:y0,w,h})}manor.width=manor.height=1}
+    for(let y=0;y<manor.height;y+=TS)for(let x=0;x<manor.width;x+=TS){const x0=Math.max(0,x-P),y0=Math.max(0,y-P),x1=Math.min(manor.width,x+TS+P),y1=Math.min(manor.height,y+TS+P),w=x1-x0,h=y1-y0,cv=mk(w,h);cv.getContext('2d').drawImage(manor,x0,y0,w,h,0,0,w,h);manorTiles.push({cv,x:x0,y:y0,w,h})}manor.width=manor.height=1;manorProbe()}
   const k=BW/manorTiles.W,vy0=cam.y-SHh/2/cam.z-10,vy1=cam.y+SHh/2/cam.z+10;
   const q0=c.imageSmoothingQuality;if(k*cam.z*dpr>1)c.imageSmoothingQuality='low';   // magnifying: 'high' quality filtering costs a lot and adds nothing
   for(const t of manorTiles){const wx=BX0+t.x*k,wy=BY0+t.y*k,ww=t.w*k,wh=t.h*k;if(wx>vx1||wx+ww<vx0||wy>vy1||wy+wh<vy0)continue;
@@ -777,6 +796,7 @@ function drawManorTiles(c,vx0,vx1){if(manorTilesOf!==manor){manorTilesOf=manor;m
     const x0=Math.max(wx,vx0),x1=Math.min(wx+ww,vx1),y0=Math.max(wy,vy0),y1=Math.min(wy+wh,vy1),sx=Math.max(0,Math.floor((x0-wx)/k)),sy=Math.max(0,Math.floor((y0-wy)/k)),sw=Math.min(t.w-sx,Math.ceil((x1-wx)/k)-sx+1),sh=Math.min(t.h-sy,Math.ceil((y1-wy)/k)-sy+1);
     if(sw>0&&sh>0)c.drawImage(t.cv,sx,sy,sw,sh,wx+sx*k,wy+sy*k,sw*k,sh*k)}
   c.imageSmoothingQuality=q0}
+function manorProbe(){const k=manorTiles.W/BW,px=(W/2-BX0)*k,py=(-BASE_H/2-BY0)*k;for(const t of manorTiles)if(px>=t.x&&px<t.x+t.w&&py>=t.y&&py<t.y+t.h){canvasHealthCheck(t.cv,px-t.x,py-t.y);break}}
 function buildManor(){
   seed=1337;
   manor=mk(BW*RES,BH*RES);const m=manor.getContext('2d');
@@ -1482,7 +1502,7 @@ function dropCat(){
 }
 function up(e){if(isHub()){hubUp(e);return}ptrs.delete(e.pointerId);
   if(drag&&e.pointerId===drag.id){dropCat();return}
-  if(press&&e.pointerId===press.id){if(press.cat===selCat&&!press.card&&vaultAction(press.cat)){doInteract();press=null;tap=null;swipe=null;return}
+  if(press&&e.pointerId===press.id){if(press.cat===selCat&&!press.card&&(vaultAction(press.cat)||vaultSoon(press.cat))){doInteract();press=null;tap=null;swipe=null;return}
     selectCat(press.cat===selCat&&!press.cat.cell?null:press.cat);if(press.cat.cell){camFollow=true;anim=null}press=null;tap=null;swipe=null;vel={x:0,y:0};hideHint();return}
   swipe=null;
   if(tap&&ptrs.size===0&&performance.now()-tap.t<400){tapBalcony(tap.x,tap.y);vel={x:0,y:0}}
@@ -1500,7 +1520,7 @@ addEventListener('keydown',e=>{const kk=e.key.toLowerCase();if(KEYDIR[kk]&&!held
   if(!m)return;e.preventDefault();if(e.repeat&&selCat&&(selCat.mv||selCat.bump))return;if(isPOV())moveCat(selCat,m[0],m[1])});
 function handleTap(p){} // shutters are no longer toggled by tapping
 // tap a portrait, then tap a west balcony: the selected cat is sent in there
-function tapBalcony(sx,sy){if(sy<roadTop()&&isPOV()&&vaultAction(selCat)){const p=toWorld(sx,sy);if(p.x>=cellX0(VC)&&p.x<=cellX0(VC)+ROOM&&p.y>=floorTop(VF)-BEAM&&p.y<=floorBottom(VF)){doInteract();return}}
+function tapBalcony(sx,sy){if(sy<roadTop()&&isPOV()&&(vaultAction(selCat)||vaultSoon(selCat))){const p=toWorld(sx,sy);if(p.x>=cellX0(VC)&&p.x<=cellX0(VC)+ROOM&&p.y>=floorTop(VF)-BEAM&&p.y<=floorBottom(VF)){doInteract();return}}
   const c=selCat;if(!c||c.cell||c.ret)return;const i=balconyAt(sx,sy);if(i<0)return;
   deployCat(c,i);hideHint()}
 function hideHint(){if(hintT>0.8)hintT=0.8}
@@ -1541,12 +1561,14 @@ function buildVault(){
   m.beginPath();m.rect(1,1,dw-2,dh-2);strokeOut(m,2.4);
   grain(doorImg,.35,.3);
 }
+// moving/landing into the vault room right now: a tap gets buffered and opens the vault once the cat can (touch version of the E-key buffer)
+function vaultSoon(ct){return !!(ct&&ct.cell&&!isOut(ct)&&isVault(ct.cell.f,ct.cell.c)&&(ct.mv||ct.land||ct.bump||(ct.act&&(ct.act.type==='slip'||ct.act.type==='free')))&&!vault.opened&&!vault.opening&&!vault.cracking)}
 function vaultAction(ct){
   if(!ct||!ct.cell||isOut(ct)||!isVault(ct.cell.f,ct.cell.c)||ct.mv||ct.bump||ct.land||ct.act)return null;
   return !vault.opened&&!vault.opening&&!vault.cracking?'open':null;
 }
 function sparkBurst(x,y,n,spd){for(let i=0;i<n;i++){const a=Math.random()*6.28,s=spd*(.3+Math.random());sparks.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-spd*.4,life:.6+Math.random()*.6,max:1.2,r:2+Math.random()*3})}}
-const qFresh=q=>T-q[2]<=(q[0]==='act'?1:.5);   // buffered moves last 0.5s, a buffered vault-open a full second
+const qFresh=q=>q[0]==='act'||T-q[2]<=.5;   // buffered moves last 0.5s; a buffered vault-open waits for the cat to arrive (crossing the vault room takes over a second)
 function runQueued(ct,q){if(q[0]==='act'){if(ct===selCat&&vaultAction(ct))doInteract()}else moveCat(ct,q[0],q[1])}
 function doInteract(){
   const ct=isPOV()?selCat:null,a=vaultAction(ct);
@@ -3143,7 +3165,7 @@ async function pickOpponent(){if(!ONLINE||!MYID)return null;const rows=async q=>
 function noteOpponent(id){const L=prog.get('recentOpps',[]).filter(x=>x!==id);L.push(id);prog.set('recentOpps',L.slice(-RECENT_N))}
 function sendRaid(win){if(!ONLINE||!MYID||!OPP)return;try{const id=MYID+'_'+Date.now().toString(36);
   ONLINE.doc('raids/'+id).set({attacker:MYID,attackerName:PNAME,defender:OPP.id,win:!!win,at:Date.now(),arank:RANK,drank:typeof OPP.rank==='number'?OPP.rank:RANK,league:LEAGUE.n,seed:REC.seed,dt:SIM_DT,ev:REC.ev,team:cats.map(c=>c.k.name),base:OPP.base,v:1,gv:GAME_V}).catch(()=>{})}catch(e){}}
-const GAME_V=15; // bump whenever gameplay changes, so older replays are marked instead of playing back wrong
+const GAME_V=16; // bump whenever gameplay changes, so older replays are marked instead of playing back wrong
 const RAID_KEEP_DAYS=30,RAID_KEEP_MAX=40;
 const DEF_WIN=12,DEF_LOSS=10; // your rank when someone raids you, at equal ranks: + for a base that held, - for a robbery
 // scaled by the raider's rank vs yours at the time: holding off a stronger thief pays more, being robbed by a weaker one costs more
@@ -3381,7 +3403,7 @@ function drawSecDrag(c){if(!secDrag)return;c.save();c.setTransform(dpr,0,0,dpr,0
   if(!secDrag.cv){secDrag.cv=mk(180,180);if(secDrag.kind==='vault'){secDrag.cv=vaultIconCv()}else if(secDrag.kind==='dog'){secDrag.cv=guardIconCv(MY_DOGS[secDrag.idx])}else trapIcon(secDrag.cv,secDrag.type)}c.drawImage(secDrag.cv,secDrag.x-s/2,secDrag.y-s*.8,s,s);c.restore()}
 document.getElementById('secBtn').addEventListener('click',enterSecurity);
 document.getElementById('secDone').addEventListener('click',exitSecurity);
-document.getElementById('secTest').addEventListener('click',()=>{if(trans&&trans.phase!=='open')return;trans=null;exitSecurity();startTestHeist()});
+document.getElementById('secTest').addEventListener('click',()=>{if(trans&&trans.phase!=='open')return;trans=null;document.documentElement.classList.add('uilock');startTestHeist()});  // stay on the edit screen while the circle closes (no flash of the hub)
 document.getElementById('secClear').addEventListener('click',()=>{if(!myTraps.length)return;for(const o of myTraps)puff(cellX0(o.c)+ROOM/2,floorBottom(o.f)-24,0,-20,10,.4);myTraps=[];saveBase();refreshSec()});
 
 /* ============ TOP BAR: profile, news, settings ============ */
@@ -3837,8 +3859,9 @@ function draw(){
   if(HUB){drawMyBase(c,z);if(isSec())drawNoisePreview(c)}
   if(!HUB){drawVault(c);
     drawTraps(c);drawCaltrops(c);drawShrooms(c);drawIce(c);drawLights(c);drawBananas(c);drawTrees(c);drawNests(c);drawTatami(c);drawBalloons(c);drawAlarms(c);drawLanterns(c);drawDrums(c);drawNets(c);drawNets(c,NETS,false,true);drawTdoors(c);drawLootDrop(c);
-    for(const ct of cats)if(ct.cell&&isOut(ct)&&!ct.dragging&&!ct.escape){drawManorCat(c,ct,z);if(ct.arrested)drawCage(c,ct.arrested)} // caged / fainted cats: in front of traps, behind dog beds, dogs and other cats
-    drawDogRooms(c,z);drawDogs(c,z);drawWindups(c);}  // the wind-up mouse zips around in front of the guards
+    drawDogRooms(c,z);drawDogs(c,z);
+    for(const ct of cats)if(ct.cell&&isOut(ct)&&!ct.dragging&&!ct.escape){drawManorCat(c,ct,z);if(ct.arrested)drawCage(c,ct.arrested)} // caged / fainted cats: in front of dog beds and dogs, behind active cats
+    drawWindups(c);}  // the wind-up mouse zips around in front of the guards
   // fog of war over rooms
   c.font='700 46px system-ui,-apple-system,sans-serif';c.textAlign='center';c.textBaseline='middle';
   if(!HUB)for(let f=0;f<FLOORS;f++)for(let cc=1;cc<NC-1;cc++){const o=fogAt(f,cc);if(o.a<.01)continue;const x0=cellX0(cc)+8,y0=floorTop(f);
