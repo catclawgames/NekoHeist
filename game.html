@@ -9,7 +9,7 @@ window.__errShown=0;window.addEventListener('error',function(e){try{if(window.__
 d.textContent+=(d.textContent?'\n':'')+String(e.message||e.error)+' @'+(e.lineno||'?')+':'+(e.colno||'?')}catch(_){}});
 </script>
 <script>/* Save epoch: raising this wipes every player's progress once (local + cloud save) — used for a full reset / new season */
-var SAVE_EPOCH=3;try{if(localStorage.getItem('saveEpoch')!==String(SAVE_EPOCH)){for(const k of Object.keys(localStorage))if(k!=='settings'&&!k.startsWith('firebase'))localStorage.removeItem(k);localStorage.setItem('saveEpoch',String(SAVE_EPOCH))}}catch(e){}
+var SAVE_EPOCH=4;try{if(localStorage.getItem('saveEpoch')!==String(SAVE_EPOCH)){for(const k of Object.keys(localStorage))if(k!=='settings'&&!k.startsWith('firebase'))localStorage.removeItem(k);localStorage.setItem('saveEpoch',String(SAVE_EPOCH))}}catch(e){}
 var SS=(()=>{const mk=st=>({getItem:k=>{try{return st.getItem(k)}catch(e){return null}},setItem:(k,v)=>{try{st.setItem(k,v)}catch(e){}},removeItem:k=>{try{st.removeItem(k)}catch(e){}}});try{sessionStorage.setItem('__t','1');sessionStorage.removeItem('__t');return mk(sessionStorage)}catch(e){}try{const L=localStorage,p='ss_';return{getItem:k=>{try{return L.getItem(p+k)}catch(e){return null}},setItem:(k,v)=>{try{L.setItem(p+k,v)}catch(e){}},removeItem:k=>{try{L.removeItem(p+k)}catch(e){}}}}catch(e){}const m={};return{getItem:k=>k in m?m[k]:null,setItem:(k,v)=>{m[k]=String(v)},removeItem:k=>{delete m[k]}}})();
 if(location.hash==='#home'||location.hash==='#heist'||location.hash==='#test'||location.hash==='#replay')document.documentElement.className='booting'+(location.hash==='#home'?' tx-home':' tx-heist')</script>
 <script>/* Software-canvas mode, only when asked for with ?cpu=1 in the address: every canvas except the main one is kept in normal memory
@@ -3124,13 +3124,17 @@ async function linkAccount(kind){const A=FB.mods.auth,au=FB.auth;let cred=null;
     sfx('coin');toast('Account linked! Your progress now follows you.');csPush(true);publishBase();renderAccount();itchNudge()}
   catch(e){const code=e&&e.code||'';
     if(code==='auth/credential-already-in-use'||code==='auth/email-already-in-use'){let c2=null;try{c2=cred||await providerCred(kind,e)}catch(_){}
-      if(c2&&await confirmSwitch()){const old=au.currentUser,oid=old&&old.isAnonymous?old.uid:null;
+      if(await confirmSwitch()){const old=au.currentUser,oid=old&&old.isAnonymous?old.uid:null;
         // switching to an account that already has a cloud save: this guest's manor and save are removed, so it doesn't linger as a phantom player
         if(oid){CLOUD_READY=false;clearTimeout(pubT);csDoc=null;for(const pth of ['bases/'+oid,'data/users/'+oid+'/save']){try{await ONLINE.doc(pth).delete()}catch(_){}}}
-        try{await A.signInWithCredential(au,c2);if(oid&&old){try{await old.delete()}catch(_){}}SS.setItem('forceCloud','1');location.reload()}catch(_){toast('Could not switch accounts')}}}
+        // sign in with the credential from the first popup; if that's missing or rejected (it happens on some browsers), open a fresh sign-in popup
+        let ok=false,why='';if(c2){try{await A.signInWithCredential(au,c2);ok=true}catch(e2){why=e2&&e2.code||''}}
+        if(!ok&&!nativeAuth()){try{await A.signInWithPopup(au,kind==='google'?new A.GoogleAuthProvider():new A.OAuthProvider('apple.com'));ok=true}catch(e3){why=e3&&e3.code||why}}
+        if(ok){if(oid&&old){try{await old.delete()}catch(_){}}SS.setItem('forceCloud','1');location.reload()}
+        else{if(oid){csDoc=ONLINE.collection('data/users/'+oid).doc('save');CLOUD_READY=true;publishBase();csPush(true)}toast('Could not sign in'+(why?' ('+why.replace('auth/','')+')':''));renderAccount()}}}
     else if(code!=='auth/popup-closed-by-user'&&code!=='auth/cancelled-popup-request')toast('Could not link the account'+(code?' ('+code.replace('auth/','')+')':''))}}
 function confirmSwitch(){return new Promise(res=>{const row=document.getElementById('acctRow');if(!row)return res(false);row.innerHTML='';
-  const sp=document.createElement('span');sp.textContent='That account already has progress.';const sm=document.createElement('small');sm.textContent='Switch to it? This device\'s guest progress will be replaced.';sp.appendChild(sm);row.appendChild(sp);
+  const sp=document.createElement('span');sp.textContent='That account is already registered.';const sm=document.createElement('small');sm.textContent='Sign in to it? If it has a save, it replaces this device\'s guest progress.';sp.appendChild(sm);row.appendChild(sp);
   const box=document.createElement('span');box.className='acctBtns';for(const [t,v] of [['Switch',true],['Cancel',false]]){const b=document.createElement('button');b.className='btn'+(v?'':' ghost');b.textContent=t;b.onclick=()=>{renderAccount();res(v)};box.appendChild(b)}row.appendChild(box)})}
 let signOutArm=0;
 function renderAccount(){const row=document.getElementById('acctRow');if(!row)return;row.innerHTML='';if(BACKEND!=='firebase'||!FB.auth||!FB.auth.currentUser){row.style.display='none';const dl=document.getElementById('acctDel');if(dl)dl.remove();return}row.style.display='';
