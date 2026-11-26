@@ -2883,12 +2883,14 @@ function updateHub(dt){
   // swipe scrolling with a little glide
   if(!hubDrag&&(Math.abs(hubVel)>2||Math.abs(hubVelY)>2)){hubX+=hubVel*dt;hubY+=hubVelY*dt;const k=Math.exp(-dt*4);hubVel*=k;hubVelY*=k}
   if(isSec()&&secDrag){const z=hubZ()*hubZf,E=56,sp=520*dt/z,p=hubPads();let mv=false;
-    // only pan in a direction where some rooms are off screen: with every room already in view there's nothing to pan to
-    const vx0=hubX-SW/2/z,vx1=hubX+SW/2/z,vy0=hubY+(p.t-SHh/2)/z,vy1=hubY+(SHh-p.b-SHh/2)/z,
-      allX=vx0<=cellX0(1)+2&&vx1>=cellX0(NC-1)-2,allY=vy0<=floorTop(FLOORS-1)-BEAM+2&&vy1>=floorBottom(0)-2;
-    if(!allX){if(secDrag.x<E){hubX-=sp*(1-secDrag.x/E);mv=true}else if(secDrag.x>SW-E){hubX+=sp*(1-(SW-secDrag.x)/E);mv=true}}
-    if(!allY){if(secDrag.y<p.t+E&&secDrag.y>0){hubY-=sp*(1-(secDrag.y-p.t)/E);mv=true}
-      else{const bot=SHh-p.b;if(secDrag.y>bot-E&&secDrag.y<bot){hubY+=sp*Math.min(1,(secDrag.y-(bot-E))/E);mv=true}}}   // just above the parts tray pans down (dropping on the tray itself still removes the part)
+    // dragging a part to the edge pans only up to a border just around the rooms (RM world px past the outer room edges): once that border
+    // is on screen in a direction, holding the part there stops panning that way. The normal camera limits (hubCamApply) stay wider
+    const RM=16,rL=cellX0(1)-RM,rR=cellX0(NC-1)+RM,rT=floorTop(FLOORS-1)-BEAM-RM,rB=floorBottom(0)+RM,hw=SW/2/z,ot=(p.t-SHh/2)/z,ob=(SHh-p.b-SHh/2)/z,x0=hubX,y0=hubY;
+    if(secDrag.x<E)hubX=Math.max(hubX-sp*(1-secDrag.x/E),Math.min(hubX,rL+hw));
+    else if(secDrag.x>SW-E)hubX=Math.min(hubX+sp*(1-(SW-secDrag.x)/E),Math.max(hubX,rR-hw));
+    if(secDrag.y<p.t+E&&secDrag.y>0)hubY=Math.max(hubY-sp*(1-(secDrag.y-p.t)/E),Math.min(hubY,rT-ot));
+    else{const bot=SHh-p.b;if(secDrag.y>bot-E&&secDrag.y<bot)hubY=Math.min(hubY+sp*Math.min(1,(secDrag.y-(bot-E))/E),Math.max(hubY,rB-ob))}   // just above the parts tray pans down (dropping on the tray itself still removes the part)
+    mv=hubX!==x0||hubY!==y0;
     if(mv){hubVel=hubVelY=0;secDrag.hover=secDrag.y<SHh-secTray.offsetHeight-8?secCellAt(secDrag.x,secDrag.y):null}}   // hold a part near the edge to pan
   hubCamApply();hubCamEase(dt);
 }
