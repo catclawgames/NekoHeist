@@ -1,7 +1,7 @@
 // Neko Heist service worker: lets the game be installed to the home screen and still open offline.
 // Network-first, so players always get the newest version when online; the cached copy is only a fallback.
-const CACHE = 'neko-heist-v1';
-const CORE = ['./', './index.html', './firebase-config.js', './pwa.js', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'neko-heist-v2';
+const CORE = ['./', './index.html', './game.html', './firebase-config.js', './pwa.js', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
