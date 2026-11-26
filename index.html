@@ -292,8 +292,9 @@ const SFX=(()=>{const sr=Math.random.bind(Math);let ac=null,master,sfxG,musG,sfx
     // simple echo for a soft, roomy feel
     const dl=ac.createDelay(1);dl.delayTime.value=.23;const fb=ac.createGain();fb.gain.value=.28;const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2200;
     revGain=ac.createGain();revGain.gain.value=.35;revGain.connect(dl);sfxRev=ac.createGain();sfxRev.connect(revGain);musRev=ac.createGain();musRev.gain.value=0;musRev.connect(revGain);dl.connect(lp);lp.connect(fb);fb.connect(dl);lp.connect(master);
-    noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=sr()*2-1;apply();if(document.hidden||!document.hasFocus())master.gain.value=0}
-  function unlock(){init();if(ac&&ac.state==='suspended')ac.resume();startMusic()}
+    noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=sr()*2-1;apply();if(document.hidden||(!matchMedia('(pointer:coarse)').matches&&!document.hasFocus()))master.gain.value=0}
+  // any tap/key: make sure audio is running (iOS leaves it 'interrupted' or 'suspended' after switching apps/tabs) and unmuted
+  function unlock(){init();if(ac&&ac.state!=='running'){try{ac.resume()}catch(e){}}startMusic();if(ac&&!document.hidden)focusMute(false)}
   ['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,unlock,{capture:true}));
   function apply(){if(!ac)return;const sn=st().sound?1:0,mu=st().music?1:0;sfxG.gain.setTargetAtTime(sn,ac.currentTime,.05);sfxRev.gain.setTargetAtTime(sn,ac.currentTime,.05);musG.gain.setTargetAtTime(mu*.32,ac.currentTime,.15);musRev.gain.setTargetAtTime(mu,ac.currentTime,.15)}
   const ok=()=>ac&&st().sound&&ac.state==='running';
@@ -402,8 +403,9 @@ const SFX=(()=>{const sr=Math.random.bind(Math);let ac=null,master,sfxG,musG,sfx
   function fadeMusic(dur){if(!ac)return;const t=ac.currentTime;for(const g of [musG,musRev]){g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+dur)}}
   // mute everything while the tab/window isn't focused (a quick ramp, so it doesn't click)
   function focusMute(off){if(!ac)return;const t=ac.currentTime;master.gain.cancelScheduledValues(t);master.gain.setValueAtTime(master.gain.value,t);master.gain.linearRampToValueAtTime(off?0:.8,t+(off?.08:.25))}
-  const syncFocus=()=>focusMute(document.hidden||!document.hasFocus());
-  addEventListener('blur',syncFocus);addEventListener('focus',syncFocus);document.addEventListener('visibilitychange',syncFocus);
+  // hidden tab = muted. Losing focus mutes on desktop only: phones often don't report focus coming back until the next tap
+  const coarse=matchMedia('(pointer:coarse)').matches,syncFocus=()=>{if(ac&&!document.hidden&&ac.state!=='running'){try{ac.resume()}catch(e){}}focusMute(document.hidden||(!coarse&&!document.hasFocus()))};
+  addEventListener('blur',syncFocus);addEventListener('focus',syncFocus);document.addEventListener('visibilitychange',syncFocus);addEventListener('pageshow',syncFocus);
   return{play,apply,unlock,fadeMusic,syncFocus}})();
 const sfx=(n,...a)=>SFX.play(n,...a);
 
