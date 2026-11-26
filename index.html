@@ -519,11 +519,15 @@ function makeNoise(){
   for(let i=0;i<id.data.length;i+=4){const v=128+(R()-.5)*190;id.data[i]=id.data[i+1]=id.data[i+2]=v;id.data[i+3]=255}
   c.putImageData(id,0,0);noisePat=n;
   // blotch tile: 32×32 noise with a wrapped extra row/column, so the smoothed 256px tile repeats seamlessly (no visible lines where it repeats)
-  const s=mk(33,33),sc=s.getContext('2d'),sd=sc.createImageData(33,33),vals=[];for(let i=0;i<32*32;i++)vals.push(128+(R()-.5)*140);
-  for(let y=0;y<33;y++)for(let x=0;x<33;x++){const v=vals[(y%32)*32+(x%32)],o=(y*33+x)*4;sd.data[o]=sd.data[o+1]=sd.data[o+2]=v;sd.data[o+3]=255}
-  sc.putImageData(sd,0,0);const b=mk(256,256),bc=b.getContext('2d');bc.imageSmoothingEnabled=true;bc.drawImage(s,.5,.5,32,32,0,0,256,256);blotchPat=b;
+  // (smoothed by hand into pixel data: Safari on the Mac refused to make a pattern from a canvas scaled up with drawImage)
+  const vals=[];for(let i=0;i<32*32;i++)vals.push(128+(R()-.5)*140);
+  const b=mk(256,256),bc=b.getContext('2d'),bd=bc.createImageData(256,256),V=(x,y)=>vals[(y&31)*32+(x&31)];
+  for(let y=0;y<256;y++){const fy=y/8,y0=Math.floor(fy),ty=fy-y0;for(let x=0;x<256;x++){const fx=x/8,x0=Math.floor(fx),tx=fx-x0;
+    const v=(V(x0,y0)*(1-tx)+V(x0+1,y0)*tx)*(1-ty)+(V(x0,y0+1)*(1-tx)+V(x0+1,y0+1)*tx)*ty,o=(y*256+x)*4;bd.data[o]=bd.data[o+1]=bd.data[o+2]=v;bd.data[o+3]=255}}
+  bc.putImageData(bd,0,0);blotchPat=b;
 }
-function grain(cv,fine,blotch){
+function grain(cv,fine,blotch){try{grainPass(cv,fine,blotch)}catch(e){console.warn('grain skipped',e)}}  // texture is cosmetic: never let it stop the game loading
+function grainPass(cv,fine,blotch){
   if(!noisePat)makeNoise();
   const L=mk(cv.width,cv.height),c=L.getContext('2d');
   c.fillStyle=c.createPattern(noisePat,'repeat');c.globalAlpha=fine;c.fillRect(0,0,L.width,L.height);
