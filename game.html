@@ -1882,7 +1882,8 @@ function bubble(c,x,y,txt,col){ // speech bubble: circle + pointer traced as one
   c.fillStyle='#fff3d6';c.fill();c.lineWidth=2;c.lineJoin='round';c.strokeStyle=OUT;c.stroke();
   c.font='900 15px system-ui,-apple-system,sans-serif';c.textAlign='center';c.fillStyle=col;c.fillText(txt,x,y+5)}
 function drawDogs(c,z,front){
-  for(const d of DOGS){if(d.gone)continue;const f=d.cell.f,cc=d.cell.c;if(!fogAt(f,cc).disc)continue;if((d.state==='catch')!==!!front)continue;
+  const asleep=d=>d.state==='sleep'||d.state==='lie';   // sleeping dogs first, so an awake dog walking past is drawn in front
+  for(const d of [...DOGS.filter(asleep),...DOGS.filter(d=>!asleep(d))]){if(d.gone)continue;const f=d.cell.f,cc=d.cell.c;if(!fogAt(f,cc).disc)continue;if((d.state==='catch')!==!!front)continue;
     let fy=floorBottom(f)-22;const st=d.step;
     if(st&&st.v){const q=Math.min(1,st.t/st.dur),w=DV_WIND/st.dur;d.look=0;
       if(q<0){const p=(st.t+DV_LOOK)/DV_LOOK;fy=floorBottom(st.f0)-22;d.crouch=0;d.look=(st.f1>st.f0?-1:1)*easeOut(Math.min(1,p/.4))}   // peeks at the floor it's about to jump to
