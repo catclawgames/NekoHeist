@@ -3108,7 +3108,7 @@ async function initFirebase(){const cfg=window.NEKO_FIREBASE;if(!cfg||!cfg.apiKe
 (async()=>{try{let db=null;
   if(window.claude&&claude.use){db=await claude.use('db');if(db){USERS=await claude.use('user');BACKEND='claude'}}
   if(!db){const f=await withTimeout(initFirebase(),15000).catch(()=>null);if(f){db=f.db;USERS=f.users;BACKEND='firebase'}}
-  if(!db)return;MYID=USERS?await USERS.id():null;if(!MYID)return;ONLINE=db;cloudInit(db);publishBase();if(MODE==='hub'&&!REPLAY)loadRaids()}catch(e){ONLINE=null}})();
+  if(!db)return;MYID=USERS?await USERS.id():null;if(!MYID)return;ONLINE=db;cloudInit(db);publishBase()}catch(e){ONLINE=null}})();   // the defense log loads once the save is settled (end of cloudInit)
 // ---- account linking (Firebase builds): guests can attach Google or Apple so progress follows them to other devices ----
 const isNativeApp=()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
 const nativeAuth=()=>isNativeApp()&&window.Capacitor.Plugins&&Capacitor.Plugins.FirebaseAuthentication||null;
@@ -3130,13 +3130,18 @@ async function linkAccount(kind){const A=FB.mods.auth,au=FB.auth;let cred=null;
     if(code==='auth/credential-already-in-use'||code==='auth/email-already-in-use'){let c2=null;try{c2=cred||await providerCred(kind,e)}catch(_){}
       if(await confirmSwitch()){const old=au.currentUser,oid=old&&old.isAnonymous?old.uid:null;{const row=document.getElementById('acctRow');if(row)row.innerHTML='<span>Signing in…<small>One moment</small></span>'}
         // switching to an account that already has a cloud save: this guest's manor and save are removed, so it doesn't linger as a phantom player
-        if(oid){CLOUD_READY=false;clearTimeout(pubT);csDoc=null;for(const pth of ['bases/'+oid,'data/users/'+oid+'/save']){try{await ONLINE.doc(pth).delete()}catch(_){}}}
+        if(oid){CLOUD_READY=false;clearTimeout(pubT);csDoc=null;for(const pth of ['bases/'+oid,'data/users/'+oid+'/save']){try{await ONLINE.doc(pth).delete()}catch(_){}}
+          try{const rs=await ONLINE.collection('raids').where('defender','==',oid).limit(200).get();for(const d of (rs.docs||[]))try{await ONLINE.doc('raids/'+d.id).delete()}catch(_){}}catch(_){}}
         // sign in with the credential from the first popup; if that's missing or rejected (it happens on some browsers), open a fresh sign-in popup
         let ok=false,why='';if(c2){try{await A.signInWithCredential(au,c2);ok=true}catch(e2){why=e2&&e2.code||''}}
         if(!ok&&!nativeAuth()){try{await A.signInWithPopup(au,kind==='google'?new A.GoogleAuthProvider():new A.OAuthProvider('apple.com'));ok=true}catch(e3){why=e3&&e3.code||why}}
         // note: don't delete the old guest *login* here: Firebase's user.delete() also signs out whoever is signed in now (the account we just
         // switched to), which dropped players back to a new guest. Its manor and save are already gone, so the leftover login is harmless
-        if(ok){CLOUD_READY=false;csDoc=null;SS.setItem('forceCloud','1');SS.setItem('acctMsg','in');location.reload()}
+        if(ok){CLOUD_READY=false;csDoc=null;let msg='in';
+          // load the account's save *before* reloading, so there's a single reload (no title -> hub -> title -> hub double load)
+          try{const nid=au.currentUser.uid,sn=await ONLINE.doc('data/users/'+nid+'/save').get(),cd=sn&&(typeof sn.data==='function'?sn.data():sn.data),ce=cd&&cd.data&&typeof cd.data==='object'?(+cd.data.saveEpoch||0):0;
+            if(ce===SAVE_EPOCH){applyCloudSave(cd,nid);msg='loaded'}else if(ce>SAVE_EPOCH)SS.setItem('forceCloud','1')}catch(_){SS.setItem('forceCloud','1')}
+          SS.setItem('acctMsg',msg);location.hash='home';location.reload()}
         else{if(oid){csDoc=ONLINE.collection('data/users/'+oid).doc('save');CLOUD_READY=true;publishBase();csPush(true)}toast('Could not sign in'+(why?' ('+why.replace('auth/','')+')':''));renderAccount()}}}
     else if(code!=='auth/popup-closed-by-user'&&code!=='auth/cancelled-popup-request')toast('Could not link the account'+(code?' ('+code.replace('auth/','')+')':''))}}
 function confirmSwitch(){return new Promise(res=>{const row=document.getElementById('acctRow');if(!row)return res(false);row.innerHTML='';
@@ -3151,8 +3156,8 @@ function renderAccount(){const row=document.getElementById('acctRow');if(!row)re
     const b=document.createElement('button');b.className='btn ghost';b.textContent='Sign out';b.onclick=async()=>{if(Date.now()-signOutArm>3000){signOutArm=Date.now();b.textContent='Tap again';return}
       // save the latest progress *before* signing out (the upload needs the sign-in), then stop all saving so nothing runs as nobody
       b.disabled=true;b.textContent='Saving…';await csSaveNow();CLOUD_READY=false;csDoc=null;clearTimeout(pubT);
-      try{await FB.mods.auth.signOut(FB.auth)}catch(e){}try{const keep=new Set(['settings']);for(const k of Object.keys(localStorage))if(!keep.has(k))localStorage.removeItem(k)}catch(e){}
-      SS.setItem('acctMsg','out');location.reload()};box.appendChild(b)}
+      try{await FB.mods.auth.signOut(FB.auth)}catch(e){}try{const keep=new Set(['settings','welcomed']);for(const k of Object.keys(localStorage))if(!keep.has(k))localStorage.removeItem(k)}catch(e){}
+      SS.setItem('acctMsg','out');location.hash='home';location.reload()};box.appendChild(b)}
   sp.appendChild(sm);row.appendChild(sp);row.appendChild(box);
   // store rules (App Store / Google Play): players who can make an account must be able to delete it from inside the app.
   // Only the phone-app builds show it; the website and itch.io profiles just have sign in / sign out
@@ -3179,6 +3184,9 @@ async function csSaveNow(){if(!CLOUD_READY||!csDoc||TEST_HEIST||REPLAY||freshGue
 function csPush(force){if(!CLOUD_READY||!csDoc||csBusy||TEST_HEIST||REPLAY||freshGuest()||window.__OUTDATED)return;const o=csSnap(),h=csHash(o);if(!force&&h===localStorage.getItem('_syncedHash'))return;
   const at=Date.now();csBusy=true;try{localStorage.setItem('_syncUid',MYID);localStorage.setItem('_saveAt',String(at));localStorage.setItem('_syncedHash',h)}catch(e){}
   Promise.resolve(csDoc.set({data:o,at,v:1})).catch(()=>{try{localStorage.removeItem('_syncedHash')}catch(e){}}).finally(()=>{csBusy=false})}
+function applyCloudSave(cd,uid){const local=csSnap();for(const k of Object.keys(local))localStorage.removeItem(k);
+  for(const [k,v] of Object.entries(cd.data))if(typeof v==='string'&&!CS_SKIP(k))localStorage.setItem(k,v);
+  localStorage.setItem('_syncedHash',csHash(csSnap()));localStorage.setItem('_saveAt',String(+cd.at||0));localStorage.setItem('_syncUid',uid)}
 async function cloudInit(db){try{csDoc=db.collection('data/users/'+MYID).doc('save');let snap=null,got=false;
     await Promise.race([(async()=>{snap=await csDoc.get();got=true})(),new Promise(r=>setTimeout(r,10000))]);
     if(!got){setTimeout(()=>cloudInit(db),15000);return}
@@ -3200,6 +3208,7 @@ async function cloudInit(db){try{csDoc=db.collection('data/users/'+MYID).doc('sa
       location.reload();return}
     if(useCloud){try{localStorage.setItem('_syncUid',MYID);localStorage.setItem('_syncedHash',lh);localStorage.setItem('_saveAt',String(+cloud.at||0))}catch(e){}}
     CLOUD_READY=true;publishBase();if(!cloud||!useCloud)csPush(true);
+    if(MODE==='hub'&&!REPLAY)loadRaids();   // only now: raid rank changes are applied against this account's own list of already-seen raids
     {const m=SS.getItem('acctMsg');SS.removeItem('acctMsg');if(m==='loaded')toast('Signed in · your saved progress is loaded');else if(m==='in')toast(cloud?'Signed in':'Signed in · your progress is now saved to this account');else if(m==='out')toast('Signed out · playing as a guest')}
   }catch(e){}}
 setInterval(()=>csPush(false),5000);
@@ -3263,6 +3272,7 @@ async function loadRaids(){if(!ONLINE||!MYID)return;try{const snap=await ONLINE.
   RAIDS=docs.map(d=>({id:d.id,...(typeof d.data==='function'?d.data():d.data)})).filter(r=>r&&r.at).sort((a,b)=>b.at-a.at);
   // tidy up: raids older than RAID_KEEP_DAYS are deleted unread; the rest count toward rank, then only the newest RAID_KEEP_MAX are kept
   const cut=Date.now()-RAID_KEEP_DAYS*864e5,expired=RAIDS.filter(r=>r.at<cut);RAIDS=RAIDS.filter(r=>r.at>=cut);
+  if(!CLOUD_READY){updateRaidDot();return}   // save not settled yet (just signed in): list only, rank changes are applied once it is
   const seen=new Set(prog.get('seenRaids',[]));let delta=0,fresh=0;for(const r of RAIDS){if(seen.has(r.id))continue;seen.add(r.id);fresh++;delta+=defDelta(r)}
   if(fresh){prog.set('seenRaids',[...seen].slice(-300));prog.set('unreadRaids',(prog.get('unreadRaids',0)|0)+fresh);
     const oldL=LEAGUE;RANK=Math.max(0,RANK+delta);BEST=Math.max(BEST,RANK);saveProg();const L2=leagueOf(RANK);
