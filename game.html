@@ -3012,7 +3012,7 @@ function updateTrans(dt){if(!trans)return;trans.t+=dt;
   if(trans.phase==='wait'&&trans.reloadAt!=null&&trans.t>=trans.reloadAt){trans.reloadAt=null;location.reload();return}
   if(trans.phase==='close'&&trans.t>=T_CLOSE){if(trans.home||trans.retry){trans.phase='wait';trans.t=0;document.documentElement.className='booting '+(trans.retry?'tx-heist':'tx-home');location.hash=trans.replay?'replay':trans.test?'test':trans.retry?'heist':'home';
       if(trans.riff)trans.reloadAt=HOME_HOLD;else location.reload();return}startHeist(true);trans.phase='hold';trans.t=0}
-  else if(trans.phase==='hold'&&trans.t>=(trans.short?.18:T_HOLD)){trans.phase='open';trans.t=0}
+  else if(trans.phase==='hold'&&trans.t>=(trans.hold||(trans.short?.18:T_HOLD))){trans.phase='open';trans.t=0}
   else if(trans.phase==='open'&&trans.t>=T_OPEN){trans=null;document.documentElement.className='';if(!isHub()&&!REPLAY&&!TEST_HEIST){const n=store.get('tipHeists',0)|0;if(n<3){store.set('tipHeists',n+1);hint.style.display='';hintT=9}}}}
 function drawTrans(c){if(!trans)return;const R=Math.hypot(SW,SHh)*.6;let r;
   if(trans.phase==='close')r=R*(1-easeIO(Math.min(1,trans.t/T_CLOSE)));else if(trans.phase==='hold'||trans.phase==='wait')r=0;else r=R*easeIO(Math.min(1,trans.t/T_OPEN));
@@ -4224,7 +4224,7 @@ setTimeout(()=>{try{resize();applyLayoutVars()}catch(e){}},1600);   // settles +
 mkPuff();resize();lastSz=innerWidth+'x'+innerHeight+'@'+(devicePixelRatio||1);initCam();
 hint.style.display='none';applyLayoutVars();drawTeamChips();hubCamApply();Object.assign(cam,hubT);
 if(REPLAY){team.splice(0,team.length,...REPLAY.team.filter(n=>COATS.some(k=>k.name===n)));startHeist(true);trans={t:0,phase:'hold',retry:true,short:true}}
-else if(location.hash==='#heist'||TEST_HEIST){startHeist(true);trans={t:0,phase:'hold',retry:true,short:true}}
+else if(location.hash==='#heist'||TEST_HEIST){startHeist(true);trans={t:0,phase:'hold',retry:true,short:true,hold:TEST_HEIST?null:.8}}   // a real heist lingers on "Robbing X's manor" a moment longer
 if(location.hash==='#home'&&SS.getItem('openSecurity')){SS.removeItem('openSecurity');setTimeout(()=>enterSecurity(),50)}
 if(location.hash==='#home'){const pl=prog.get('pendingLeague',null);prog.set('pendingLeague',null);if(pl)document.documentElement.className='booting';trans=pl?{t:0,phase:'hold',home:true,league:LEAGUE.name}:{t:0,phase:'hold',home:true,short:true}}
 requestAnimationFrame(frame);
