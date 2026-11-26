@@ -57,7 +57,7 @@ window.NEKO_FIREBASE = null;
   .corner.dim{filter:saturate(.4) brightness(.7)}
   .corner.pulse .ic{animation:pz .35s}
   @keyframes pz{0%{transform:scale(1)}40%{transform:scale(.85) rotate(-8deg)}100%{transform:scale(1)}}
-  #hubTop{position:fixed;left:calc(var(--sa-left,env(safe-area-inset-left)) + 10px);right:calc(var(--sa-right,env(safe-area-inset-right)) + 10px);top:calc(max(var(--sa-top,env(safe-area-inset-top)),var(--st,0px)) + 10px);display:flex;justify-content:space-between;align-items:flex-start;z-index:4;pointer-events:none}
+  #hubTop{position:fixed;left:calc(var(--sa-left,env(safe-area-inset-left)) + 10px);right:calc(var(--sa-right,env(safe-area-inset-right)) + 10px);top:calc(var(--st,0px) + 10px);display:flex;justify-content:space-between;align-items:flex-start;z-index:4;pointer-events:none}
   #hubTop>*{pointer-events:auto}
   #hubTop .tr{display:flex;gap:8px}
   .topBtn{border:3px solid #17120e;border-radius:14px;background:linear-gradient(#7a5530,#4e341b);box-shadow:inset 0 3px 0 rgba(255,220,160,.25),0 5px 0 #17120e;color:#f3e2b8;padding:0;position:relative}
@@ -175,14 +175,14 @@ window.NEKO_FIREBASE = null;
     color:#f3e2b8;font:800 9.5px system-ui,-apple-system,sans-serif;letter-spacing:.3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
   .sideBtn svg{width:28px;height:28px}
   .sideBtn:active{transform:translateY(4px);box-shadow:0 2px 0 #17120e}
-  #secBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(max(var(--sa-top,env(safe-area-inset-top)),var(--st,0px)) + 10px);display:none;align-items:center;gap:10px;z-index:5;
+  #secBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--st,0px) + 10px);display:none;align-items:center;gap:10px;z-index:5;
     background:linear-gradient(#4e341b,#2b1d11);border:3px solid #17120e;border-radius:14px;padding:8px 10px;box-shadow:0 4px 0 #17120e;color:#f3e2b8;font-family:system-ui,-apple-system,sans-serif;width:min(440px,calc(100% - 24px));box-sizing:border-box}
   #endScreen .testNote{margin:10px auto 2px;font:800 12px system-ui;color:#d9c08a;background:rgba(0,0,0,.3);border:2px solid #17120e;border-radius:10px;padding:6px 10px;display:inline-block}
   .pillBtn{position:fixed;right:10px;top:10px;z-index:6;display:none;align-items:center;gap:6px;font:900 13px system-ui;color:#f3e2b8;background:linear-gradient(#5a3e20,#3a2715);border:3px solid #17120e;border-radius:12px;padding:7px 11px;box-shadow:0 3px 0 #17120e;cursor:pointer}
   html.booting #testEdit,html.booting #replayBar{display:none!important}
   #replayBar button{margin-left:6px;font:900 12px system-ui;border:2px solid #17120e;border-radius:8px;background:#ffd45a;color:#2a1c10;padding:3px 8px}
   .row.raid .rk{font-weight:900;margin:0 8px}.row.raid.lost .rk{color:#ff7a6a}.row.raid.held .rk{color:#7ae08a}.row.raid .btn{padding:6px 10px}.muted{opacity:.75;text-align:center}
-  #secTest{top:calc(max(var(--sa-top,env(safe-area-inset-top)),var(--st,0px)) + 72px)}
+  #secTest{top:calc(var(--st,0px) + 72px)}
   #secBar .ttl{font-weight:900;font-size:14px;color:#ffd45a}
   #secBar .bar{flex:1;height:14px;border:2px solid #17120e;border-radius:8px;background:#120c06;overflow:hidden}
   #secBar .fill{height:100%;width:0;background:linear-gradient(#9be27f,#3fbf6a);transition:width .25s}
@@ -264,7 +264,7 @@ window.NEKO_FIREBASE = null;
   #endScreen.lose .emblem{background:repeating-linear-gradient(90deg,#8c919c 0 6px,#17120e 6px 9px,#3a3f4a 9px 15px)}
   #endScreen button{font:800 16px system-ui,-apple-system,sans-serif;padding:11px 26px;border:3px solid #17120e;border-radius:12px;background:#ffd45a;color:#2a1c10;box-shadow:0 4px 0 #17120e}
   #endScreen button:active{transform:translateY(3px);box-shadow:0 1px 0 #17120e}
-  #hint{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--sa-top,env(safe-area-inset-top)) + 78px);
+  #hint{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--st,0px) + 78px);
     background:rgba(16,20,40,.78);border:2px solid #17120e;border-radius:12px;padding:9px 14px;font-size:13px;
     line-height:1.35;text-align:center;max-width:300px;pointer-events:none;transition:opacity .8s}
 </style>
@@ -1408,8 +1408,15 @@ function resize(){
   cv.width=SW*dpr;cv.height=SHh*dpr;tcv.width=1;tcv.height=1;tcDirty=true;
   const PHONE=matchMedia('(pointer:coarse)').matches&&SHh>SW&&SW<700;
   safeTop=parseFloat(getComputedStyle(document.getElementById('safe')).paddingTop)||0;   // the real safe-area inset only (the web app / shell already reports the notch and status bar)
+  // iOS (home-screen web app) can start reporting a phantom top inset after rotating landscape and back. A real notch never grows, so per
+  // orientation keep the smallest inset seen this session (kept across scene reloads); the bottom inset gets the same guard below
+  {const k='insetMin_'+(SW>SHh?'L':'P');let mm=null;try{mm=JSON.parse(SS.getItem(k)||'null')}catch(e){}if(mm&&typeof mm.t==='number')safeTop=Math.min(safeTop,mm.t);
+    window.__insetKey=k;window.__insetTop=safeTop}
   document.getElementById('hint').style.top=(safeTop+78)+'px';
-  safeBot=Math.max(parseFloat(getComputedStyle(document.getElementById('safe')).paddingBottom)||0,PHONE?30:0);
+  {let rb=parseFloat(getComputedStyle(document.getElementById('safe')).paddingBottom)||0,mm=null;try{mm=JSON.parse(SS.getItem(window.__insetKey)||'null')}catch(e){}
+    if(mm&&typeof mm.b==='number')rb=Math.min(rb,mm.b);
+    // only remember insets once the page has settled (iOS can report them late right after launch); before that, use what's reported
+    if(mm||performance.now()>1500)SS.setItem(window.__insetKey,JSON.stringify({t:window.__insetTop,b:rb}));safeBot=Math.max(rb,PHONE?30:0)}
   RHv=Math.round(Math.max(SHh<520?96:130,Math.min(220,SHh*.2)));UB=Math.round((SHh<520?10:20)+safeBot);CR=0;
   const want=window.CPU_CANVAS?1:Math.max(1,Math.min(2.2,Math.sqrt(7e6/(BW*BH)),zSel()*dpr*1.35));
   // rebuild the big manor bitmap only when noticeably more detail is needed (not on every rotation), and hand the old one's memory back first:
@@ -1840,8 +1847,10 @@ function drawDogAwake(c,x,y,sz,ppu,d){
   const nod=nodQ>=0?Math.sin(nodQ*Math.PI*2)*Math.sin(nodQ*Math.PI):0,hx=.33+(sniff?.08:0),hy=bodyY-.2+(sniff?.18+Math.sin(T*9)*.02:0)+cr*.04+Math.max(0,nod)*.025;
   const lk=d.step&&d.step.v?d.look||0:0,cf=conf?dogConfRot(d.t):0;c.save();c.translate(hx+Math.abs(lk)*.015,hy+lk*.035+(conf?Math.min(0,cf)*.05:0));c.rotate(conf?cf:sniff?.35:lk?lk*.38:mov?Math.sin(ph*2)*.03:nod*.1);c.scale(1.12,1.1);  // same head size as the sleeping pose
   // both ears sit behind the head, so the head's outline runs across their bases (no separate seam line over the face)
-  const ear=(ex,ey,a)=>{c.save();c.translate(ex,ey);c.rotate(a);c.beginPath();c.moveTo(-.055,.02);c.lineTo(0,-.15);c.lineTo(.06,.02);c.closePath();c.fillStyle=d.dark;c.fill();S();
-    c.beginPath();c.moveTo(-.025,0);c.lineTo(0,-.09);c.lineTo(.03,0);c.closePath();c.fillStyle='#e8939a';c.fill();c.restore()};
+  // drawn in 100x larger units: Safari/WebKit outlines sharp corners poorly when tiny coordinates are scaled up a lot (thin, broken ear outline)
+  const ear=(ex,ey,a)=>{c.save();c.translate(ex,ey);c.rotate(a);c.scale(.01,.01);c.lineJoin='round';c.miterLimit=2;
+    c.beginPath();c.moveTo(-5.5,2);c.lineTo(-.9,-13.6);c.quadraticCurveTo(0,-15.6,.9,-13.6);c.lineTo(6,2);c.closePath();c.fillStyle=d.dark;c.fill();c.lineWidth=lw*100;c.strokeStyle=OUT;c.stroke();
+    c.beginPath();c.moveTo(-2.5,0);c.lineTo(0,-9);c.lineTo(3,0);c.closePath();c.fillStyle='#e8939a';c.fill();c.restore()};
   ear(-.08,-.11,-.25);ear(.07,-.12,.2);
   const head=()=>{c.beginPath();c.ellipse(0,0,.17,.145,0,0,7)};head();c.fillStyle=d.base;c.fill();
   c.save();head();c.clip();c.fillStyle=d.belly;c.beginPath();c.ellipse(.08,.08,.12,.08,0,0,7);c.fill();catShade(c,-.17,-.145,.34,.29,sz,ppu,.7);c.restore();head();S();
@@ -3105,7 +3114,10 @@ async function linkAccount(kind){const A=FB.mods.auth,au=FB.auth;let cred=null;
     sfx('coin');toast('Account linked! Your progress now follows you.');csPush(true);publishBase();renderAccount();itchNudge()}
   catch(e){const code=e&&e.code||'';
     if(code==='auth/credential-already-in-use'||code==='auth/email-already-in-use'){let c2=null;try{c2=cred||await providerCred(kind,e)}catch(_){}
-      if(c2&&await confirmSwitch()){try{await A.signInWithCredential(au,c2);SS.setItem('forceCloud','1');location.reload()}catch(_){toast('Could not switch accounts')}}}
+      if(c2&&await confirmSwitch()){const old=au.currentUser,oid=old&&old.isAnonymous?old.uid:null;
+        // switching to an account that already has a cloud save: this guest's manor and save are removed, so it doesn't linger as a phantom player
+        if(oid){CLOUD_READY=false;clearTimeout(pubT);csDoc=null;for(const pth of ['bases/'+oid,'data/users/'+oid+'/save']){try{await ONLINE.doc(pth).delete()}catch(_){}}}
+        try{await A.signInWithCredential(au,c2);if(oid&&old){try{await old.delete()}catch(_){}}SS.setItem('forceCloud','1');location.reload()}catch(_){toast('Could not switch accounts')}}}
     else if(code!=='auth/popup-closed-by-user'&&code!=='auth/cancelled-popup-request')toast('Could not link the account'+(code?' ('+code.replace('auth/','')+')':''))}}
 function confirmSwitch(){return new Promise(res=>{const row=document.getElementById('acctRow');if(!row)return res(false);row.innerHTML='';
   const sp=document.createElement('span');sp.textContent='That account already has progress.';const sm=document.createElement('small');sm.textContent='Switch to it? This device\'s guest progress will be replaced.';sp.appendChild(sm);row.appendChild(sp);
@@ -3133,7 +3145,10 @@ const CS_SKIP=k=>k.startsWith('ss_')||k.startsWith('firebase')||k.startsWith('__
 let CLOUD_READY=false,csDoc=null,csBusy=false;
 function csSnap(){const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&!CS_SKIP(k))o[k]=localStorage.getItem(k)}}catch(e){}return o}
 function csHash(o){const str=JSON.stringify(Object.keys(o).sort().map(k=>[k,o[k]]));let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)+'_'+str.length}
-function csPush(force){if(!CLOUD_READY||!csDoc||csBusy||TEST_HEIST||REPLAY)return;const o=csSnap(),h=csHash(o);if(!force&&h===localStorage.getItem('_syncedHash'))return;
+// a brand-new guest (or the fresh guest you get after signing out) isn't written to the database until it has finished a heist:
+// visitors who leave straight away, and sign-out/sign-in cycles, no longer leave phantom accounts behind
+function freshGuest(){try{return BACKEND==='firebase'&&FB.auth&&FB.auth.currentUser&&FB.auth.currentUser.isAnonymous&&!prog.get('firstRunDone',false)}catch(e){return false}}
+function csPush(force){if(!CLOUD_READY||!csDoc||csBusy||TEST_HEIST||REPLAY||freshGuest())return;const o=csSnap(),h=csHash(o);if(!force&&h===localStorage.getItem('_syncedHash'))return;
   const at=Date.now();csBusy=true;try{localStorage.setItem('_syncUid',MYID);localStorage.setItem('_saveAt',String(at));localStorage.setItem('_syncedHash',h)}catch(e){}
   Promise.resolve(csDoc.set({data:o,at,v:1})).catch(()=>{try{localStorage.removeItem('_syncedHash')}catch(e){}}).finally(()=>{csBusy=false})}
 async function cloudInit(db){try{csDoc=db.collection('data/users/'+MYID).doc('save');let snap=null,got=false;
@@ -3154,7 +3169,7 @@ async function cloudInit(db){try{csDoc=db.collection('data/users/'+MYID).doc('sa
 setInterval(()=>csPush(false),5000);
 addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')csPush(false)});addEventListener('pagehide',()=>csPush(false));
 let pubT=null;
-function publishBase(){if(!ONLINE||!MYID||TEST_HEIST||!CLOUD_READY)return;clearTimeout(pubT);pubT=setTimeout(()=>{try{ONLINE.doc('bases/'+MYID).set({traps:myTraps.map(o=>({type:o.type,f:o.f,c:o.c})),vault:{f:MY_VAULT.f,c:MY_VAULT.c},
+function publishBase(){if(!ONLINE||!MYID||TEST_HEIST||!CLOUD_READY||freshGuest())return;clearTimeout(pubT);pubT=setTimeout(()=>{try{ONLINE.doc('bases/'+MYID).set({traps:myTraps.map(o=>({type:o.type,f:o.f,c:o.c})),vault:{f:MY_VAULT.f,c:MY_VAULT.c},
   dogs:MY_DOGS.map(d=>({f:d.f,c:d.c})),rank:RANK,league:LEAGUE.n,name:PNAME,updated:Date.now(),v:1}).catch(()=>{})}catch(e){}},800)}
 // ---- computer manors: 10 per league, made with the same rules as a player's base (40 points, vault + 3 guards, one piece a room) ----
 const CPU_NAMES=['Lord Tanuki','Lady Kitsune','Old Man Kappa','Baron Fugu','Madam Koi','Sir Hachi','Auntie Tsuru','Count Mogura','Duchess Usagi','Master Kame'];
@@ -4143,7 +4158,7 @@ function drawLantern(c,L){
   c.restore();
 }
 // screen-edge spacing for the HTML UI; recomputed on every resize/rotation (it used to be set once at load, so rotating a phone left the UI offset until a reload)
-function applyLayoutVars(){for(const id of ['hubUI','hubLeft','secTray'])document.getElementById(id).style.setProperty('--hb',UB+'px');document.getElementById('secBar').style.setProperty('--st',safeTop+'px');document.getElementById('hubTop').style.setProperty('--st',safeTop+'px');try{measureSecBand()}catch(e){}}
+function applyLayoutVars(){for(const id of ['hubUI','hubLeft','secTray'])document.getElementById(id).style.setProperty('--hb',UB+'px');document.getElementById('secBar').style.setProperty('--st',safeTop+'px');document.getElementById('hubTop').style.setProperty('--st',safeTop+'px');document.documentElement.style.setProperty('--st',safeTop+'px');try{measureSecBand()}catch(e){}}
 // resize handling: coalesce bursts (rotation fires several events while the size settles) and only re-layout when the size really changed,
 // then snap the camera to its new spot instead of easing — repeated small re-layouts made the camera wobble after rotating
 let lastSz='',rzT=null;
@@ -4157,6 +4172,7 @@ for(const ev of ['resize','orientationchange','scroll','focusout','pageshow'])ad
 if(window.visualViewport){visualViewport.addEventListener('resize',()=>{unscroll();setTimeout(unscroll,200)});visualViewport.addEventListener('scroll',unscroll)}
 // iOS reports rotation before the new size / safe areas settle: check again a little later
 addEventListener('orientationchange',()=>{onResize();setTimeout(onResize,350);setTimeout(onResize,800)});
+setTimeout(()=>{try{resize();applyLayoutVars()}catch(e){}},1600);   // settles + records this orientation's safe-area insets
 mkPuff();resize();lastSz=innerWidth+'x'+innerHeight+'@'+(devicePixelRatio||1);initCam();
 hint.style.display='none';applyLayoutVars();drawTeamChips();hubCamApply();Object.assign(cam,hubT);
 if(REPLAY){team.splice(0,team.length,...REPLAY.team.filter(n=>COATS.some(k=>k.name===n)));startHeist(true);trans={t:0,phase:'hold',retry:true,short:true}}
