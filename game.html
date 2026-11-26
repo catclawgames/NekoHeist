@@ -115,7 +115,7 @@ window.NEKO_FIREBASE = null;
   #endScreen .card{position:relative}#endScreen .ebal{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(15,10,6,.72);border:2px solid #17120e;border-radius:12px;padding:3px 9px 3px 5px;font:900 13px system-ui;color:#ffd45a}
   #endScreen .sub2{margin:0 0 6px;font:600 13.5px system-ui;opacity:.9}
   #endScreen .card.win .reveal{min-height:150px}
-  #endScreen .chestBox{position:relative;cursor:pointer}#endScreen .chestBox canvas{width:200px;height:146px;display:block;margin:0 auto}
+  #endScreen .chestBox{position:relative;cursor:pointer}#endScreen .chestBox canvas{width:200px;height:240px;display:block;margin:-47px auto;pointer-events:none}#endScreen h2,#endScreen .sub2,#endScreen .tapHint,#endScreen .reveal,#endScreen .row{position:relative}
   #endScreen .tapHint{font:800 13px system-ui;color:#ffd45a;animation:pulse 1s infinite alternate}
   @keyframes pulse{from{opacity:.5;transform:scale(.96)}to{opacity:1;transform:scale(1.04)}}
   #endScreen .gold{display:flex;align-items:center;justify-content:center;gap:8px;font:900 30px system-ui;color:#ffd45a;text-shadow:0 3px 0 #17120e;margin:2px 0 8px;animation:pop .4s cubic-bezier(.2,1.6,.4,1)}
@@ -289,7 +289,7 @@ window.NEKO_FIREBASE = null;
 <div id="catInfo"><div class="card"><button class="x" aria-label="Close">✕</button><canvas width="240" height="240"></canvas>
   <h2></h2><div class="sub"></div><p class="bio"></p><div class="skill"><div class="sk-head"><span class="badge"></span><b></b><span class="tag"></span></div><p></p></div></div></div>
 <div id="teamPick"><div class="card"><button class="x" aria-label="Close">✕</button><h2>Your team</h2><div class="sub">Pick up to 3 cats · <span class="count"></span></div><div class="grid"></div><button class="done">Done</button></div></div>
-<div id="endScreen"><div class="card"><div class="ebal"></div><h2></h2><p class="sub2"></p><div class="chestBox"><canvas width="300" height="220"></canvas><div class="tapHint">Tap to open</div></div><div class="reveal"></div><div class="row"></div></div></div>
+<div id="endScreen"><div class="card"><div class="ebal"></div><h2></h2><p class="sub2"></p><div class="chestBox"><canvas width="300" height="360"></canvas><div class="tapHint">Tap to open</div></div><div class="reveal"></div><div class="row"></div></div></div>
 <div id="leagueUp"></div>
 <div id="market"><div class="shop"><div class="awning"></div><button class="x" aria-label="Close">✕</button><div class="lanterns"><i></i><i></i><i></i></div>
   <div class="mk-head"><h2>Neko Market</h2><div class="bal"></div></div><div class="mk-sub">Fresh cats & cunning traps. New stock each league.</div><div class="shelves"></div></div></div>
@@ -3696,7 +3696,7 @@ function chestDraw(m,o,CH){const w=44,h=24,x=-w/2,y=-h;m.lineJoin='round';
     rr(m,-5,y-5,10,11,2);m.fillStyle=CH.lock;m.fill();m.lineWidth=1.4;m.stroke();m.fillStyle=OUT;m.beginPath();m.arc(0,y,1.6,0,7);m.fill();
     if(CH.gem){m.beginPath();m.moveTo(0,y-10);m.lineTo(4,y-6);m.lineTo(0,y-2);m.lineTo(-4,y-6);m.closePath();m.fillStyle=CH.gem;m.fill();m.lineWidth=1.2;m.stroke()}}}
 (function chestLoop(){const cv2=document.querySelector('#endScreen .chestBox canvas');
-  if(cv2&&result&&result.win){const m=cv2.getContext('2d'),W2=cv2.width,H2=cv2.height,dt=1/60;result.t+=dt;const t=result.t,CH=TH.chest;m.setTransform(1,0,0,1,0,0);m.clearRect(0,0,W2,H2);
+  if(cv2&&result&&result.win){const PAD=70,m=cv2.getContext('2d'),W2=cv2.width,H2=cv2.height-2*PAD,dt=1/60;result.t+=dt;const t=result.t,CH=TH.chest;m.setTransform(1,0,0,1,0,0);m.clearRect(0,0,cv2.width,cv2.height);m.setTransform(1,0,0,1,0,PAD);   // PAD: headroom above/below so the glow isn't cut off
     const SH=.45; // anticipation before the lid pops
     let o=0,bob=0,rot=0,sx=1,sy=1;
     if(!result.opened){bob=-Math.abs(Math.sin(t*2.6))*7;const rat=Math.sin(t*1.1)>.75;rot=rat?Math.sin(t*40)*.05:0;sy=1+Math.sin(t*5.2)*.02;
@@ -3713,7 +3713,7 @@ function chestDraw(m,o,CH){const w=44,h=24,x=-w/2,y=-h;m.lineJoin='round';
     m.save();m.translate(W2/2,H2*.84+bob);m.rotate(rot);m.scale(2.7*sx,2.7*sy);
     if(result.opened&&t<SH){m.save();m.globalCompositeOperation='lighter';m.fillStyle=`rgba(255,220,120,${t/SH})`;m.fillRect(-20,-25,40,3);m.restore()} // light leaking from the seam
     chestDraw(m,Math.max(0,o),CH);m.restore();
-    for(const c of chestCoins){c.vy+=900*dt;c.x+=c.vx*dt;c.y+=c.vy*dt;c.r+=c.vr*dt;c.l-=dt;m.save();m.translate(c.x,c.y);m.scale(Math.abs(Math.cos(c.r))*.9+.1,1);m.globalAlpha=Math.max(0,Math.min(1,c.l*2));
+    for(const c of chestCoins){c.vy+=900*dt;c.x+=c.vx*dt;c.y+=c.vy*dt;c.r+=c.vr*dt;c.l-=dt;m.save();m.translate(c.x,c.y);m.scale(Math.abs(Math.cos(c.r))*.9+.1,1);m.globalAlpha=Math.max(0,Math.min(1,c.l*2,(H2+PAD-6-c.y)/45));   // fade out before the canvas's bottom edge instead of being cut off
       m.beginPath();m.arc(0,0,8,0,7);m.fillStyle='#ffd45a';m.fill();m.lineWidth=2;m.strokeStyle='#8a5a10';m.stroke();m.fillStyle='rgba(255,255,255,.6)';m.fillRect(-2,-5,2,4);m.restore()}
     for(let i=chestCoins.length-1;i>=0;i--)if(chestCoins[i].l<=0)chestCoins.splice(i,1);
     for(const p of chestSparks){p.l-=dt;const a=Math.max(0,p.l/.7);m.save();m.translate(p.x,p.y-(.7-p.l)*20);m.rotate(p.l*4);m.globalAlpha=a;m.fillStyle='#fff6c8';m.beginPath();
