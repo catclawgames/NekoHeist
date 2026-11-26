@@ -993,7 +993,7 @@ const COATS=[
   {name:'Miru',base:'#c99a62',dark:'#8e5f36',belly:'#f6e8cc',tip:'#f6e8cc',pat:'stripes',eye:'#5ad1c2',mask:'#3b2f5a',sack:'#c8962e',acc:'monocle'},
 ];
 // cats you own (the three starters to begin with); each league adds one to the Market
-const CAT_LEAGUE={Mochi:1,Kumo:1,Hana:1,Shadow:2,Miru:3,Tinker:4,Kagi:5},CAT_PRICE={Hana:250,Shadow:600,Miru:900,Tinker:1200,Kagi:1500};
+const CAT_LEAGUE={Mochi:1,Kumo:1,Hana:1,Shadow:2,Miru:3,Tinker:4,Kagi:5},CAT_PRICE={Hana:300,Shadow:720,Miru:1080,Tinker:1440,Kagi:1800};   // x1.2 of the original prices
 const RENAMED={Sightseer:'Miru',Lockpick:'Kagi'};
 let OWNED=prog.get('ownedCats',['Mochi','Kumo']).map(n=>RENAMED[n]||n).filter(n=>COATS.some(k=>k.name===n));if(!OWNED.length)OWNED=['Mochi','Kumo'];
 const owns=n=>OWNED.includes(n);
@@ -3038,21 +3038,21 @@ document.getElementById('teamBtn').addEventListener('click',openTeam);
 const TRAP_DEFS=[
   {id:'cans',name:'Can alarm',cost:3,price:0,desc:'Rattles loudly when crossed, waking dogs 2 rooms away.'},
   {id:'caltrops',name:'Caltrops',cost:3,price:0,desc:'Spikes that hurt a cat the whole time it stays in the room.'},
-  {id:'shroom',name:'Poison mushroom',cost:3,price:150,desc:'Fumes make a passing cat sick and lose health over time.'},
-  {id:'windup',name:'Wind-up mouse',cost:3,price:300,league:2,desc:'A cat walking in winds up the tin mouse. When the cat walks out, it races 2 rooms ahead that way and squeaks. Guards who hear it come to check the mouse\'s room. Jumping out doesn\'t set it off.'},
-  {id:'light',name:'Traffic light',cost:3,price:300,league:2,desc:'Waits on amber. When a cat comes near it turns red for 3 seconds, blocking the way in and out, then green until the cat leaves.'},
-  {id:'banana',name:'Banana peel',cost:3,price:250,league:2,desc:'A cat that steps or lands on it slips and crashes down. Dogs on the floor below hear it and come up to look. Never runs out.'},
-  {id:'apple',name:'Apple tree',cost:3,price:400,league:2,desc:'Starts with one apple and grows another after every visit, up to 3. More apples, harder bonk.'},
-  {id:'hornet',name:'Hornet nest',cost:6,price:650,league:3,desc:'Drops when a cat walks in. The swarm knocks that cat out cold. One use. Hana is tough enough to survive it.'},
-  {id:'ice',name:'Icy floor',cost:2,price:500,league:3,desc:'A cat walking in from the side slides right through into the next room. If the way is blocked it slams into the wall and gets hurt. Breaks after 3 slides, or if a cat lands on it.'},
-  {id:'haunter',name:'Haunter',cost:3,price:600,league:3,desc:'A ghost dog follows any cat that enters its room. Once the cat has left the room, it strikes as soon as the cat stops in the next room, stunning it for a moment.'},
-  {id:'net',name:'Cat trap',cost:3,price:550,league:3,desc:'A box drops over a cat that stops in the middle of the room, heard 2 rooms away. Guards can\'t see a cat in the box. Tap to bust out. The crash is heard 2 floors up and down, then it sets itself back up.'},
-  {id:'tatami',name:'Tatami mat',cost:3,price:700,league:4,desc:'A cat walking in from the side gets smacked by the mat flipping up. Heavy damage, and the cat is left dizzy, so its next move may go the wrong way.'},
-  {id:'lantern',name:'Watchful lantern',cost:2,price:650,league:4,desc:'A paper lantern with a painted eye that lights up and goes dark during the heist. Any cat in the room while it\'s lit is spotted: noise 2 rooms either side, and a burst of damage.'},
-  {id:'balloon',name:'Dog balloon',cost:3,price:750,league:4,desc:'A pump house blows up a balloon dog while a cat is in the room. If it fills up it POPs, stinging the cat and heard in every room around it, diagonals too. Fast cats can dash past in time. Then the pump starts on the next balloon.'},
-  {id:'bomber',name:'Bomber dog',cost:5,price:900,league:4,desc:'A mass-produced robot guard. It hears and hunts like a dog, only faster. On contact it explodes, knocking a cat out. One use. Hana survives the blast.'},
-  {id:'drum',name:'Taiko drum',cost:3,price:900,league:5,desc:'A cat walking in bumps the big drum. The boom carries up and down the whole column, waking guards on every floor. It booms every time.'},
-  {id:'alarm',name:'Alarm',cost:5,price:1000,league:5,desc:'Goes off when a cat walks into its room, alerting the whole manor. Every sleeping guard heads straight for it. It can go off again once it stops ringing.'}];
+  {id:'shroom',name:'Poison mushroom',cost:3,price:180,desc:'Fumes make a passing cat sick and lose health over time.'},
+  {id:'windup',name:'Wind-up mouse',cost:3,price:360,league:2,desc:'A cat walking in winds up the tin mouse. When the cat walks out, it races 2 rooms ahead that way and squeaks. Guards who hear it come to check the mouse\'s room. Jumping out doesn\'t set it off.'},
+  {id:'light',name:'Traffic light',cost:3,price:360,league:2,desc:'Waits on amber. When a cat comes near it turns red for 3 seconds, blocking the way in and out, then green until the cat leaves.'},
+  {id:'banana',name:'Banana peel',cost:3,price:300,league:2,desc:'A cat that steps or lands on it slips and crashes down. Dogs on the floor below hear it and come up to look. Never runs out.'},
+  {id:'apple',name:'Apple tree',cost:3,price:480,league:2,desc:'Starts with one apple and grows another after every visit, up to 3. More apples, harder bonk.'},
+  {id:'hornet',name:'Hornet nest',cost:6,price:780,league:3,desc:'Drops when a cat walks in. The swarm knocks that cat out cold. One use. Hana is tough enough to survive it.'},
+  {id:'ice',name:'Icy floor',cost:2,price:600,league:3,desc:'A cat walking in from the side slides right through into the next room. If the way is blocked it slams into the wall and gets hurt. Breaks after 3 slides, or if a cat lands on it.'},
+  {id:'haunter',name:'Haunter',cost:3,price:720,league:3,desc:'A ghost dog follows any cat that enters its room. Once the cat has left the room, it strikes as soon as the cat stops in the next room, stunning it for a moment.'},
+  {id:'net',name:'Cat trap',cost:3,price:660,league:3,desc:'A box drops over a cat that stops in the middle of the room, heard 2 rooms away. Guards can\'t see a cat in the box. Tap to bust out. The crash is heard 2 floors up and down, then it sets itself back up.'},
+  {id:'tatami',name:'Tatami mat',cost:3,price:840,league:4,desc:'A cat walking in from the side gets smacked by the mat flipping up. Heavy damage, and the cat is left dizzy, so its next move may go the wrong way.'},
+  {id:'lantern',name:'Watchful lantern',cost:2,price:780,league:4,desc:'A paper lantern with a painted eye that lights up and goes dark during the heist. Any cat in the room while it\'s lit is spotted: noise 2 rooms either side, and a burst of damage.'},
+  {id:'balloon',name:'Dog balloon',cost:3,price:900,league:4,desc:'A pump house blows up a balloon dog while a cat is in the room. If it fills up it POPs, stinging the cat and heard in every room around it, diagonals too. Fast cats can dash past in time. Then the pump starts on the next balloon.'},
+  {id:'bomber',name:'Bomber dog',cost:5,price:1080,league:4,desc:'A mass-produced robot guard. It hears and hunts like a dog, only faster. On contact it explodes, knocking a cat out. One use. Hana survives the blast.'},
+  {id:'drum',name:'Taiko drum',cost:3,price:1080,league:5,desc:'A cat walking in bumps the big drum. The boom carries up and down the whole column, waking guards on every floor. It booms every time.'},
+  {id:'alarm',name:'Alarm',cost:5,price:1200,league:5,desc:'Goes off when a cat walks into its room, alerting the whole manor. Every sleeping guard heads straight for it. It can go off again once it stops ringing.'}];
 TRAP_DEFS.forEach(d=>{if(!d.league)d.league=1});
 const SEC_LIMIT=40;
 let OWNED_TRAPS=prog.get('ownedTraps',['cans','caltrops']);
@@ -3604,7 +3604,7 @@ let result=null;
 function setEbal(v){document.querySelector('#endScreen .ebal').innerHTML=`<i class="coin"></i><span id="ebalN">${v}</span>`}
 // rank only fully counts online against real players: offline heists are practice (no rank, half coins); a computer manor used as a
 // fallback while online moves rank half as much. Stops farming the fixed computer manors offline to climb the leagues
-const OFFLINE_COIN_MUL=.5,CPU_RANK_MUL=.5;
+const OFFLINE_COIN_MUL=.5,CPU_RANK_MUL=1;   // computer manors found while online count fully
 function heistKind(){return !ONLINE?'offline':OPP&&OPP.cpu?'cpu':'real'}
 function scaledRankDelta(win){const k=heistKind();if(k==='offline')return 0;const d=rankDelta(win,OPP&&!OPP.cpu&&typeof OPP.rank==='number'?OPP.rank:RANK);
   return k==='cpu'?Math.sign(d)*Math.max(1,Math.round(Math.abs(d)*CPU_RANK_MUL)):d}
@@ -3621,7 +3621,7 @@ function countTo(id,to,ms,from=0){const t0=performance.now(),el=()=>document.get
 function showRank(){const r=result,ov=document.getElementById('endScreen'),rv=ov.querySelector('.reveal');
   const N=nextLeague(r.oldL),p0=leagueProgress(r.oldR);
   rv.insertAdjacentHTML('beforeend',`<div class="rankBox">${leagueBadge(r.oldL,34)}<div class="rk"><div class="rl">${leagueTitle(r.oldR)}</div><div class="rn"><b id="rankN">${r.oldR}</b><span class="${r.d>=0?'up':'down'}">${r.d>=0?'+':''}${r.d}</span></div>
-    <div class="pb big"><i id="rankBar" style="width:${Math.round(p0*100)}%"></i></div></div></div>${r.kind==='offline'?'<div class="rankNote">Offline practice · rank only changes online · half coins</div>':r.kind==='cpu'?'<div class="rankNote">No players found · computer manor · half rank</div>':''}`);
+    <div class="pb big"><i id="rankBar" style="width:${Math.round(p0*100)}%"></i></div></div></div>${r.kind==='offline'?'<div class="rankNote">Offline practice · rank only changes online · half coins</div>':''}`);
   setTimeout(()=>{countTo('rankN',r.newR,800,r.oldR);if(r.d>0)sfx('rankUp');const bar=document.getElementById('rankBar');
     const tierUp=r.L2.n===r.oldL.n&&tierOf(r.newR)!==tierOf(r.oldR),crossed=r.L2.n!==r.oldL.n||tierUp,upw=r.L2.n>r.oldL.n||(tierUp&&tierOf(r.newR)>tierOf(r.oldR));bar.style.transition='width .8s cubic-bezier(.3,.9,.3,1)';bar.style.width=(crossed?(upw?100:0):Math.round(leagueProgress(r.newR)*100))+'%';
     setTimeout(()=>{if(crossed)leagueChange();else finishResults()},950)},250)}
