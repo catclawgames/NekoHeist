@@ -1546,9 +1546,10 @@ addEventListener('blur',forgetAllPointers);document.addEventListener('visibility
 const KEYDIR={w:[0,1],arrowup:[0,1],s:[0,-1],arrowdown:[0,-1],a:[-1,0],arrowleft:[-1,0],d:[1,0],arrowright:[1,0]};const heldKeys=[];
 const liveHeld=()=>heldKeys.length?KEYDIR[heldKeys[heldKeys.length-1]]:null;
 function heldDir(){return MODE==='heist'&&inSim?SIMHELD:liveHeld()}
-addEventListener('keyup',e=>{const k=e.key.toLowerCase(),i=heldKeys.indexOf(k);if(i>=0)heldKeys.splice(i,1)});
+addEventListener('keyup',e=>{const k=(e.key||'').toLowerCase(),i=heldKeys.indexOf(k);if(i>=0)heldKeys.splice(i,1)});
 addEventListener('blur',()=>heldKeys.length=0);
-addEventListener('keydown',e=>{const kk=e.key.toLowerCase();if(KEYDIR[kk]&&!heldKeys.includes(kk))heldKeys.push(kk);
+addEventListener('keydown',e=>{if(!e.key)return;const kk=e.key.toLowerCase();   // autofill sends key events with no key name
+if(KEYDIR[kk]&&!heldKeys.includes(kk))heldKeys.push(kk);
   if(isHub())return;const k=kk;if(selCat&&selCat.netted&&(KEYDIR[k]||k==='e'||k===' ')){e.preventDefault();if(!e.repeat)netTap(selCat);return}
   if((k==='e'||k===' ')&&!e.repeat){e.preventDefault();doInteract();return}const m={w:[0,1],arrowup:[0,1],s:[0,-1],arrowdown:[0,-1],a:[-1,0],arrowleft:[-1,0],d:[1,0],arrowright:[1,0]}[k];
   if(!m)return;e.preventDefault();if(e.repeat&&selCat&&(selCat.mv||selCat.bump))return;if(isPOV())moveCat(selCat,m[0],m[1])});
