@@ -1833,12 +1833,12 @@ function drawDogAwake(c,x,y,sz,ppu,d){
   // head (lowered + bobbing when sniffing)
   const nod=nodQ>=0?Math.sin(nodQ*Math.PI*2)*Math.sin(nodQ*Math.PI):0,hx=.33+(sniff?.08:0),hy=bodyY-.2+(sniff?.18+Math.sin(T*9)*.02:0)+cr*.04+Math.max(0,nod)*.025;
   const lk=d.step&&d.step.v?d.look||0:0,cf=conf?dogConfRot(d.t):0;c.save();c.translate(hx+Math.abs(lk)*.015,hy+lk*.035+(conf?Math.min(0,cf)*.05:0));c.rotate(conf?cf:sniff?.35:lk?lk*.38:mov?Math.sin(ph*2)*.03:nod*.1);c.scale(1.12,1.1);  // same head size as the sleeping pose
+  // both ears sit behind the head, so the head's outline runs across their bases (no separate seam line over the face)
   const ear=(ex,ey,a)=>{c.save();c.translate(ex,ey);c.rotate(a);c.beginPath();c.moveTo(-.055,.02);c.lineTo(0,-.15);c.lineTo(.06,.02);c.closePath();c.fillStyle=d.dark;c.fill();S();
     c.beginPath();c.moveTo(-.025,0);c.lineTo(0,-.09);c.lineTo(.03,0);c.closePath();c.fillStyle='#e8939a';c.fill();c.restore()};
-  ear(-.08,-.11,-.25);
+  ear(-.08,-.11,-.25);ear(.07,-.12,.2);
   const head=()=>{c.beginPath();c.ellipse(0,0,.17,.145,0,0,7)};head();c.fillStyle=d.base;c.fill();
   c.save();head();c.clip();c.fillStyle=d.belly;c.beginPath();c.ellipse(.08,.08,.12,.08,0,0,7);c.fill();catShade(c,-.17,-.145,.34,.29,sz,ppu,.7);c.restore();head();S();
-  ear(.07,-.12,.2);
   const mo=d.mouth||0;
   if(mo>0){c.save();c.translate(.1,.07);c.rotate(.55*mo);c.beginPath();c.ellipse(.07,.02,.075,.035,0,0,7);c.fillStyle=d.belly;c.fill();S();c.restore();
     c.beginPath();c.ellipse(.15,.09+.03*mo,.06,.03*mo,0,0,7);c.fillStyle='#5a1a22';c.fill();c.fillStyle='#fff';for(const tx of [.12,.19]){c.beginPath();c.moveTo(tx,.075);c.lineTo(tx+.012,.1);c.lineTo(tx+.024,.075);c.fill()}}
