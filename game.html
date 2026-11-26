@@ -115,7 +115,8 @@ window.NEKO_FIREBASE = null;
   #endScreen .card{position:relative}#endScreen .ebal{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(15,10,6,.72);border:2px solid #17120e;border-radius:12px;padding:3px 9px 3px 5px;font:900 13px system-ui;color:#ffd45a}
   #endScreen .sub2{margin:0 0 6px;font:600 13.5px system-ui;opacity:.9}
   #endScreen .card.win .reveal{min-height:150px}
-  #endScreen .chestBox{position:relative;cursor:pointer}#endScreen .chestBox canvas{width:200px;height:240px;display:block;margin:-47px auto;pointer-events:none}#endScreen h2,#endScreen .sub2,#endScreen .tapHint,#endScreen .reveal,#endScreen .row{position:relative}
+  #endScreen .chestBox{position:relative;cursor:pointer}#profBtn.nudge{position:relative}#profBtn.nudge::after{content:'';position:absolute;top:4px;left:56px;width:14px;height:14px;border-radius:50%;background:#e8483c;border:2.5px solid #17120e;animation:pulse 1s infinite alternate}
+  #endScreen .chestBox canvas{width:200px;height:240px;display:block;margin:-47px auto;pointer-events:none}#endScreen h2,#endScreen .sub2,#endScreen .tapHint,#endScreen .reveal,#endScreen .row{position:relative}
   #endScreen .tapHint{font:800 13px system-ui;color:#ffd45a;animation:pulse 1s infinite alternate}
   @keyframes pulse{from{opacity:.5;transform:scale(.96)}to{opacity:1;transform:scale(1.04)}}
   #endScreen .gold{display:flex;align-items:center;justify-content:center;gap:8px;font:900 30px system-ui;color:#ffd45a;text-shadow:0 3px 0 #17120e;margin:2px 0 8px;animation:pop .4s cubic-bezier(.2,1.6,.4,1)}
@@ -3059,7 +3060,7 @@ async function initFirebase(){const cfg=window.NEKO_FIREBASE;if(!cfg||!cfg.apiKe
   const base='https://www.gstatic.com/firebasejs/'+FB_VER+'/',[app,auth,fs]=await Promise.all(['firebase-app.js','firebase-auth.js','firebase-firestore.js'].map(f=>import(base+f)));
   const a=app.initializeApp(cfg),au=auth.getAuth(a),db=fs.getFirestore(a);FB.auth=au;FB.mods={auth,fs};
   await new Promise(r=>{const un=auth.onAuthStateChanged(au,u=>{un();r(u)})});
-  if(!au.currentUser)await auth.signInAnonymously(au);   // guest first: everyone gets an account instantly, linking Google/Apple is optional
+  if(!au.currentUser)await auth.signInAnonymously(au);setTimeout(()=>{try{itchNudge()}catch(e){}},0);   // guest first: everyone gets an account instantly, linking Google/Apple is optional
   const wrapD=ref=>({set:v=>fs.setDoc(ref,v),get:async()=>{const d=await fs.getDoc(ref);return{exists:d.exists(),data:()=>d.data()}},delete:()=>fs.deleteDoc(ref)});
   const wrapQ=(q,coll)=>({where:(f,op,v)=>wrapQ(fs.query(q,fs.where(f,op,v)),coll),limit:n=>wrapQ(fs.query(q,fs.limit(n)),coll),orderBy:(f,dir)=>wrapQ(fs.query(q,fs.orderBy(f,dir)),coll),
     get:async()=>{const r=await fs.getDocs(q);return{docs:r.docs.map(d=>({id:d.id,data:()=>d.data()}))}},doc:id=>wrapD(fs.doc(coll,id))});
@@ -3071,6 +3072,12 @@ async function initFirebase(){const cfg=window.NEKO_FIREBASE;if(!cfg||!cfg.apiKe
 // ---- account linking (Firebase builds): guests can attach Google or Apple so progress follows them to other devices ----
 const isNativeApp=()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
 const nativeAuth=()=>isNativeApp()&&window.Capacitor.Plugins&&Capacitor.Plugins.FirebaseAuthentication||null;
+// Apple sign-in needs an Apple Developer account + the Apple provider set up in Firebase: only offered where it's configured
+function appleOn(){return isNativeApp()||!!(window.NEKO_FIREBASE&&window.NEKO_FIREBASE.apple)}
+// on itch.io the game runs inside itch's page, where browsers (Safari especially) may clear a guest's sign-in: nudge guests to link Google
+const ON_ITCH=/(^|\.)itch\.zone$/.test(location.hostname)||/(^|\.)itch\.io$/.test(location.hostname);
+function itchNudge(){try{const b=document.getElementById('profBtn');if(!b)return;const show=ON_ITCH&&BACKEND==='firebase'&&FB.auth&&FB.auth.currentUser&&FB.auth.currentUser.isAnonymous&&canLink()
+    &&(store.get('heistWins',0)+store.get('heistLosses',0))>=1&&!store.get('itchNudgeSeen',false);b.classList.toggle('nudge',!!show)}catch(e){}}
 function canLink(){return BACKEND==='firebase'&&FB.auth&&FB.auth.currentUser&&(!isNativeApp()||!!nativeAuth())}
 async function providerCred(kind,err){const A=FB.mods.auth;
   if(err)return kind==='google'?A.GoogleAuthProvider.credentialFromError(err):A.OAuthProvider.credentialFromError(err);
@@ -3078,7 +3085,7 @@ async function providerCred(kind,err){const A=FB.mods.auth;
   const r=await P.signInWithApple({skipNativeAuth:true});return new A.OAuthProvider('apple.com').credential({idToken:r.credential.idToken,rawNonce:r.credential.nonce})}
 async function linkAccount(kind){const A=FB.mods.auth,au=FB.auth;let cred=null;
   try{if(nativeAuth()){cred=await providerCred(kind);await A.linkWithCredential(au.currentUser,cred)}else await A.linkWithPopup(au.currentUser,kind==='google'?new A.GoogleAuthProvider():new A.OAuthProvider('apple.com'));
-    sfx('coin');toast('Account linked! Your progress now follows you.');csPush(true);publishBase();renderAccount()}
+    sfx('coin');toast('Account linked! Your progress now follows you.');csPush(true);publishBase();renderAccount();itchNudge()}
   catch(e){const code=e&&e.code||'';
     if(code==='auth/credential-already-in-use'||code==='auth/email-already-in-use'){let c2=null;try{c2=cred||await providerCred(kind,e)}catch(_){}
       if(c2&&await confirmSwitch()){try{await A.signInWithCredential(au,c2);SS.setItem('forceCloud','1');location.reload()}catch(_){toast('Could not switch accounts')}}}
@@ -3089,8 +3096,8 @@ function confirmSwitch(){return new Promise(res=>{const row=document.getElementB
 let signOutArm=0;
 function renderAccount(){const row=document.getElementById('acctRow');if(!row)return;row.innerHTML='';if(BACKEND!=='firebase'||!FB.auth||!FB.auth.currentUser){row.style.display='none';const dl=document.getElementById('acctDel');if(dl)dl.remove();return}row.style.display='';
   const u=FB.auth.currentUser,sp=document.createElement('span'),sm=document.createElement('small'),box=document.createElement('span');box.className='acctBtns';
-  if(u.isAnonymous){sp.textContent='Guest account';sm.textContent=canLink()?'Link an account to keep your progress on other devices':'Saved on this device';
-    if(canLink())for(const [k,t] of [['google','Google'],['apple','Apple']]){const b=document.createElement('button');b.className='btn';b.textContent=t;b.onclick=()=>linkAccount(k);box.appendChild(b)}}
+  if(u.isAnonymous){sp.textContent='Guest account';sm.textContent=canLink()?(ON_ITCH?'On itch.io your browser may clear guest progress. Link Google to keep it':'Link an account to keep your progress on other devices'):'Saved on this device';
+    if(canLink())for(const [k,t] of [['google','Google'],['apple','Apple']]){if(k==='apple'&&!appleOn())continue;const b=document.createElement('button');b.className='btn';b.textContent=t;b.onclick=()=>linkAccount(k);box.appendChild(b)}}
   else{const pv=(u.providerData[0]||{}).providerId||'';sp.textContent=pv.includes('apple')?'Signed in with Apple':'Signed in with Google';sm.textContent=u.email||u.displayName||'';
     const b=document.createElement('button');b.className='btn ghost';b.textContent='Sign out';b.onclick=async()=>{if(Date.now()-signOutArm>3000){signOutArm=Date.now();b.textContent='Tap again';return}
       csPush(true);try{await FB.mods.auth.signOut(FB.auth)}catch(e){}try{const keep=new Set(['settings']);for(const k of Object.keys(localStorage))if(!keep.has(k))localStorage.removeItem(k)}catch(e){}location.reload()};box.appendChild(b)}
@@ -3427,7 +3434,7 @@ panel.addEventListener('pointerdown',e=>{panel._bd=e.target===panel;e.stopPropag
 
 let PNAME=(store.get('playerName','')||'').slice(0,16);
 function showName(){document.getElementById('pName').textContent=PNAME||'Player'}showName();
-document.getElementById('profBtn').addEventListener('click',()=>{const w=store.get('heistWins',0),l=store.get('heistLosses',0),L=LEAGUE,N=nextGoal(RANK);
+document.getElementById('profBtn').addEventListener('click',()=>{if(document.getElementById('profBtn').classList.contains('nudge')){store.set('itchNudgeSeen',true);itchNudge()}const w=store.get('heistWins',0),l=store.get('heistLosses',0),L=LEAGUE,N=nextGoal(RANK);
   openPanel('Profile',`<div class="row nameRow"><span>Name<small>Shown to players who raid you</small></span><input id="nameIn" maxlength="16" placeholder="Player"></div><div class="row acctRow" id="acctRow" style="display:none"></div><div class="row" style="justify-content:flex-start;gap:12px">${leagueBadge(L,46)}<span style="flex:1">${leagueTitle(RANK)}<small>Rank ${RANK}${N?` · ${N.min-RANK} to ${N.name}`:' · Top league'}</small><div class="pb big" style="margin-top:6px"><i style="width:${Math.round(leagueProgress(RANK)*100)}%"></i></div></span></div>
   <div class="stats"><div><b>${RANK}</b><span>Rank</span></div><div><b>${BEST}</b><span>Best rank</span></div><div><b>${COINS}</b><span>Coins</span></div></div>
   <div class="stats"><div><b>${w+l}</b><span>Heists</span></div><div><b>${w}</b><span>Wins</span></div><div><b>${l}</b><span>Losses</span></div></div>
@@ -3443,7 +3450,7 @@ portraitInto(document.querySelector('#profBtn canvas'),{k:COATS[0],slot:0},104);
 /* ============ PROGRESSION UI: league bar, coins, market, results ============ */
 const LCOL=L=>L.th.roofA;
 function leagueBadge(L,size){return `<span class="lbadge" style="--lc:${LCOL(L)};--lg:${L.th.chest.band};width:${size}px;height:${size}px;font-size:${Math.round(size*.45)}px">${L.n}</span>`}
-function refreshLeagueUI(){const L=LEAGUE,N=nextGoal(RANK),p=leagueProgress(RANK);
+function refreshLeagueUI(){try{itchNudge()}catch(e){}const L=LEAGUE,N=nextGoal(RANK),p=leagueProgress(RANK);
   document.querySelector('#profBtn small').textContent=leagueTitle(RANK);
   const lb=document.getElementById('leagueBar');lb.innerHTML=`${leagueBadge(L,22)}<div class="lt"><div class="ln">${leagueTitle(RANK)}<span>${RANK}${N?' / '+N.min:''}</span></div><div class="pb"><i style="width:${Math.round(p*100)}%"></i></div></div>`;
   document.getElementById('coinPill').innerHTML=`<i class="coin"></i>${COINS}`}
