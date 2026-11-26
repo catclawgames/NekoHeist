@@ -17,10 +17,8 @@ if(location.hash==='#home'||location.hash==='#heist'||location.hash==='#test'||l
    reading pixels back from a stuck graphics process can freeze the page. */
 (function(){var q='';try{q=location.search+(window.parent!==window?window.parent.location.search:'')}catch(e){q=location.search}
   try{localStorage.removeItem('__cpuCanvas')}catch(e){}   // left behind by the short-lived automatic check
-  window.__bootT=performance.now();window.__bootHidden=document.hidden;document.addEventListener('visibilitychange',function(){if(document.hidden)window.__bootHidden=true});   // a background tab gets no frames: not a sign of slowness
-  var auto=false;try{auto=sessionStorage.getItem('__cpuAuto')==='1'}catch(e){}
-  if(/[?&]cpu=0/.test(q)){auto=false;try{sessionStorage.removeItem('__cpuAuto')}catch(e){}}
-  var on=/[?&]cpu=1/.test(q)||auto;window.CPU_CANVAS=on;window.CPU_AUTO=auto;if(!on)return;
+  try{sessionStorage.removeItem('__cpuAuto')}catch(e){}   // left behind by the short-lived automatic switch
+  var on=/[?&]cpu=1/.test(q);window.CPU_CANVAS=on;if(!on)return;
   var g=HTMLCanvasElement.prototype.getContext;
   HTMLCanvasElement.prototype.getContext=function(t,o){if(t==='2d'&&this.id!=='c'&&this.id!=='tc'){o=Object.assign({willReadFrequently:true},o||{})}return g.call(this,t,o)};
 })();
@@ -1389,8 +1387,14 @@ function selectCat(ct){
   else if(wasPOV){anim={from:{...cam},to:selView(),t:0}}
 }
 let roadC=null,roadKey='';
+// adaptive resolution: if the game can't hold ~42 fps for a while, draw the main canvas at a slightly lower pixel density (Retina 2x -> 1.75x -> ...).
+// The browser scales it up, so it just looks a touch softer, but each frame is much cheaper. Kept for this browser session.
+let dprCap=+SS.getItem('dprCap')||9,perfEma=1/60,perfSlow=0,perfT=0,titleCovers=false;
+function perfWatch(raw){if(titleCovers||document.hidden||raw>.25)return;perfT+=raw;if(perfT<3)return;perfEma+=(raw-perfEma)*.08;
+  if(perfEma>1/42){perfSlow+=raw;if(perfSlow>1.5&&dpr>1.01){dprCap=Math.max(1,Math.round((dpr-.25)*4)/4);SS.setItem('dprCap',String(dprCap));perfSlow=0;perfEma=1/60;perfT=1.5;resize()}}
+  else perfSlow=Math.max(0,perfSlow-raw*.5)}
 function resize(){
-  dpr=Math.min(window.devicePixelRatio||1,2.5);SW=innerWidth;SHh=innerHeight;
+  dpr=Math.min(window.devicePixelRatio||1,2.5,dprCap);SW=innerWidth;SHh=innerHeight;
   // keep the backing canvas under ~8 megapixels: Safari caps total canvas memory, and a full-res canvas on a big Retina window blows past it (the scene goes blank)
   while(dpr>1&&SW*SHh*dpr*dpr>6e6)dpr=Math.max(1,dpr-.25);
   if(window.CPU_CANVAS)dpr=1;   // software-canvas mode (?cpu=1): every image is copied to the screen by the CPU, so draw at 1x to keep it smooth
@@ -3556,36 +3560,41 @@ function buildHubUI(){const H=document.documentElement,list=[['profBtn',-60,0,-6
   list.forEach(([id,fx,fy,fr],i)=>{const el=document.getElementById(id);if(!el)return;el.classList.add('ub');el.style.setProperty('--d',(.06*i)+'s');el.style.setProperty('--fx',fx+'px');el.style.setProperty('--fy',fy+'px');el.style.setProperty('--fr',fr+'deg')});
   H.classList.remove('uiPre');H.classList.add('uiBuild');setTimeout(()=>{H.classList.remove('uiBuild');list.forEach(([id])=>{const el=document.getElementById(id);if(el)el.classList.remove('ub')})},1400)}
 function showTitle(){document.documentElement.classList.add('uiPre');
-  const el=document.getElementById('title'),cv=el.querySelector('canvas'),m=cv.getContext('2d');modalOpen=true;
-  let W=0,H=0,dpr=1,t=0,last=performance.now(),run=true,gone=false,grain,shoot=null,nextShoot=2.5;
+  const el=document.getElementById('title'),cv=el.querySelector('canvas');let m=cv.getContext('2d');modalOpen=true;titleCovers=true;
+  let W=0,H=0,dpr=1,t=0,last=performance.now(),run=true,gone=false,grain,shoot=null,nextShoot=2.5,fdt=1/60,tCap=+SS.getItem('titleCap')||2,tEma=1/60,tSlow=0,layA=null,layB=null,layO=null,starIn=null,logoC=null,logoU=0;
   const R=Math.random,cats=[1,0,2].map(i=>({k:COATS[i],slot:i,pose:{},walk:0,tailT:i*1.7,blink:0,earT:0,hp:1,bt:1+R()*3}));
   const stars=Array.from({length:110},()=>[R(),R()*.62,R()*1.4+.5,R()*6.3]);
   const petals=Array.from({length:22},()=>({x:R(),y:R(),s:R()*.5+.7,p:R()*6.3,v:R()*.4+.6}));
   const gc=document.createElement('canvas');gc.width=gc.height=160;{const gm=gc.getContext('2d'),id=gm.createImageData(160,160);for(let i=0;i<id.data.length;i+=4){const v=R()*255;id.data[i]=id.data[i+1]=id.data[i+2]=v;id.data[i+3]=16}gm.putImageData(id,0,0)}
   const town=Array.from({length:14},(_,i)=>({w:.07+R()*.06,h:.04+R()*.05,win:R()<.6,wx:R()}));
-  const resize=()=>{dpr=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);grain=m.createPattern(gc,'repeat')};
+  const resize=()=>{dpr=Math.min(2,tCap,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);grain=m.createPattern(gc,'repeat');layA=null;logoC=null};
   resize();addEventListener('resize',resize);
   const OL='#17120e',U=()=>Math.min(W,H);
   function ink(x,y,w,h,seed){// brushy ink banner behind the logo
     m.save();m.translate(x,y);m.beginPath();const n=28;for(let i=0;i<=n;i++){const a=i/n*Math.PI*2,r=1+Math.sin(a*5+seed)*.05+Math.sin(a*11+seed*2)*.03;m.lineTo(Math.cos(a)*w*r,Math.sin(a)*h*r*(Math.cos(a)>.8?.75:1))}
     m.fillStyle='rgba(12,8,20,.55)';m.fill();m.restore()}
-  function logo(cx,cy,u){
-    const bob=Math.sin(t*1.4)*u*.006;m.save();m.translate(cx,cy+bob);m.rotate(-.045);
+  // the logo's ink banner, sun stripe, HEIST and seal never change: drawn once into a sprite; only the bobbing NEKO letters are live
+  function logoStatic(u){
     ink(0,u*.025,u*.56,u*.17,1.3);
     // red sun disc behind HEIST
     {m.save();m.translate(0,u*.135);m.rotate(.02);m.beginPath();m.moveTo(-u*.36,u*.01);m.quadraticCurveTo(-u*.1,-u*.035,u*.38,-u*.02);m.lineTo(u*.34,u*.012);m.quadraticCurveTo(0,u*.0,-u*.33,u*.03);m.closePath();m.fillStyle='#c8372d';m.fill();m.lineWidth=u*.009;m.strokeStyle=OL;m.stroke();m.restore()}
     m.textAlign='center';m.textBaseline='alphabetic';m.lineJoin='round';
-    // NEKO
-    let fs=u*.085;m.font=`900 ${fs}px system-ui,-apple-system,sans-serif`;const L='NEKO'.split(''),sp=fs*.95;
-    L.forEach((ch,i)=>{const x=(i-1.5)*sp,y=-u*.07+Math.sin(t*2.2+i*.8)*u*.004;m.lineWidth=fs*.22;m.strokeStyle=OL;m.strokeText(ch,x,y+fs*.06);m.strokeText(ch,x,y);m.fillStyle='#f6e7c4';m.fillText(ch,x,y)});
     // HEIST
-    fs=u*.2;m.font=`900 ${fs}px system-ui,-apple-system,sans-serif`;const y=u*.11;
+    let fs=u*.2;m.font=`900 ${fs}px system-ui,-apple-system,sans-serif`;const y=u*.11;
     m.lineWidth=fs*.2;m.strokeStyle=OL;m.strokeText('HEIST',0,y+fs*.09);m.fillStyle=OL;m.fillText('HEIST',0,y+fs*.09);m.strokeText('HEIST',0,y);
     const gr=m.createLinearGradient(0,y-fs*.75,0,y);gr.addColorStop(0,'#fff2b0');gr.addColorStop(.45,'#ffd45a');gr.addColorStop(1,'#e58a2c');m.fillStyle=gr;m.fillText('HEIST',0,y);
     m.save();m.beginPath();m.rect(-u,y-fs*.74,2*u,fs*.2);m.clip();m.fillStyle='rgba(255,255,255,.35)';m.fillText('HEIST',0,y);m.restore();
     // hanko seal
     const hx=-u*.36,hy=-u*.085,hs=u*.075;m.save();m.translate(hx,hy);m.rotate(.12);m.fillStyle='#b8302a';m.strokeStyle=OL;m.lineWidth=u*.009;m.beginPath();m.roundRect(-hs/2,-hs/2,hs,hs,hs*.14);m.fill();m.stroke();
     m.strokeStyle='#f6e7c4';m.lineWidth=u*.004;m.strokeRect(-hs*.38,-hs*.38,hs*.76,hs*.76);m.fillStyle='#f6e7c4';m.font=`900 ${hs*.62}px serif`;m.textBaseline='middle';m.fillText('猫',0,hs*.04);m.restore();
+    }
+  function logo(cx,cy,u){
+    if(!logoC||logoU!==u){logoU=u;const k=dpr,bw=Math.ceil(u*1.4*k),bh=Math.ceil(u*.55*k);logoC=document.createElement('canvas');logoC.width=bw;logoC.height=bh;const mm=m;m=logoC.getContext('2d');m.setTransform(k,0,0,k,u*.7*k,u*.25*k);logoStatic(u);m=mm}
+    const bob=Math.sin(t*1.4)*u*.006;m.save();m.translate(cx,cy+bob);m.rotate(-.045);m.drawImage(logoC,-u*.7,-u*.25,u*1.4,u*.55);
+    m.textAlign='center';m.textBaseline='alphabetic';m.lineJoin='round';
+    // NEKO
+    let fs=u*.085;m.font=`900 ${fs}px system-ui,-apple-system,sans-serif`;const L='NEKO'.split(''),sp=fs*.95;
+    L.forEach((ch,i)=>{const x=(i-1.5)*sp,y=-u*.07+Math.sin(t*2.2+i*.8)*u*.004;m.lineWidth=fs*.22;m.strokeStyle=OL;m.strokeText(ch,x,y+fs*.06);m.strokeText(ch,x,y);m.fillStyle='#f6e7c4';m.fillText(ch,x,y)});
     m.restore()}
   function roof(ry){
     // tiled kawara roof sloping away from the ridge
@@ -3611,48 +3620,60 @@ function showTitle(){document.documentElement.classList.add('uiPre');
     for(const yy of [.62,.86,1.1,1.34,1.58]){m.beginPath();const w=Math.sqrt(Math.max(0,1-((yy-1.1)/.68)**2))*s*.62;m.moveTo(-w,s*yy);m.lineTo(w,s*yy);m.stroke()}
     m.fillStyle='#2a1d14';m.strokeStyle=OL;m.lineWidth=Math.max(2,s*.07);m.fillRect(-s*.32,s*1.74,s*.64,s*.14);m.strokeRect(-s*.32,s*1.74,s*.64,s*.14);
     m.fillStyle='#f6e7c4';m.font=`900 ${s*.42}px serif`;m.textAlign='center';m.textBaseline='middle';m.globalAlpha=.85;m.fillText('猫',0,s*1.12);m.restore()}
-  function draw(){
-    const u=U();m.setTransform(dpr,0,0,dpr,0,0);
-    const sky=m.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#090b22');sky.addColorStop(.45,'#1d1c48');sky.addColorStop(.75,'#4a2c58');sky.addColorStop(1,'#6b3a52');m.fillStyle=sky;m.fillRect(0,0,W,H);
-    for(const [x,y,r,p] of stars){m.globalAlpha=.35+.65*Math.abs(Math.sin(t*1.2+p));m.fillStyle='#fff6d8';m.fillRect(x*W,y*H,r,r)}m.globalAlpha=1;
-    if(shoot){const k=shoot.t/0.9,x=shoot.x+k*shoot.dx,y=shoot.y+k*shoot.dy;const g=m.createLinearGradient(x,y,x-shoot.dx*.25,y-shoot.dy*.25);g.addColorStop(0,'rgba(255,250,220,'+(1-k)+')');g.addColorStop(1,'rgba(255,250,220,0)');m.strokeStyle=g;m.lineWidth=2;m.beginPath();m.moveTo(x,y);m.lineTo(x-shoot.dx*.25,y-shoot.dy*.25);m.stroke()}
-    const ry=H*.74,portrait=H>W;
-    // moon
+  // layers that never move are drawn once per size into cached canvases: sky + moon (A), Fuji + town + roof (B), film grain + vignette (O)
+  function buildLayers(){const u=U(),ry=H*.74,portrait=H>W,mk2=()=>{const c=document.createElement('canvas');c.width=cv.width;c.height=cv.height;return c},main=m;
     const mx=W*(portrait?.68:.82),my=H*(portrait?.47:.36),mr=u*(portrait?.2:.17);
+    layA=mk2();m=layA.getContext('2d');m.setTransform(dpr,0,0,dpr,0,0);
+    const sky=m.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#090b22');sky.addColorStop(.45,'#1d1c48');sky.addColorStop(.75,'#4a2c58');sky.addColorStop(1,'#6b3a52');m.fillStyle=sky;m.fillRect(0,0,W,H);
     const halo=m.createRadialGradient(mx,my,mr*.8,mx,my,mr*2.6);halo.addColorStop(0,'rgba(255,230,170,.28)');halo.addColorStop(1,'rgba(255,230,170,0)');m.fillStyle=halo;m.fillRect(mx-mr*3,my-mr*3,mr*6,mr*6);
     m.beginPath();m.arc(mx,my,mr,0,7);const mg=m.createRadialGradient(mx-mr*.3,my-mr*.3,mr*.1,mx,my,mr);mg.addColorStop(0,'#fff8de');mg.addColorStop(1,'#f0d796');m.fillStyle=mg;m.fill();
     m.save();m.clip();m.fillStyle='rgba(190,160,100,.22)';for(const [a,b,c] of [[-.35,-.2,.22],[.3,.25,.16],[.1,-.45,.1],[-.15,.42,.13],[.48,-.1,.08]]){m.beginPath();m.arc(mx+a*mr,my+b*mr,c*mr,0,7);m.fill()}m.restore();
     m.lineWidth=Math.max(3,u*.008);m.strokeStyle=OL;m.beginPath();m.arc(mx,my,mr,0,7);m.stroke();
-    // wisps of cloud across the moon
-    m.fillStyle='rgba(40,32,80,.55)';for(const [o,yy,w] of [[0,.35,1.3],[.5,.6,1]]){const cx=mx+((t*.02*u+o*mr*4)%(mr*4))-mr*2;m.beginPath();m.roundRect(cx-w*mr*.6,my+yy*mr,w*mr*1.2,mr*.12,mr*.06);m.fill()}
-    // Fuji + distant town
+    layB=mk2();m=layB.getContext('2d');m.setTransform(dpr,0,0,dpr,0,0);
     m.fillStyle='#2e2858';m.beginPath();m.moveTo(-10,ry);m.lineTo(W*.05,ry-u*.12);m.lineTo(W*.22,ry-u*.34);m.lineTo(W*.3,ry-u*.36);m.lineTo(W*.38,ry-u*.33);m.lineTo(W*.6,ry-u*.08);m.lineTo(W+10,ry-u*.04);m.lineTo(W+10,ry);m.fill();
     m.fillStyle='#d9d6ec';m.globalAlpha=.75;m.beginPath();m.moveTo(W*.22,ry-u*.34);m.lineTo(W*.3,ry-u*.36);m.lineTo(W*.38,ry-u*.33);m.lineTo(W*.34,ry-u*.29);m.lineTo(W*.31,ry-u*.31);m.lineTo(W*.27,ry-u*.28);m.lineTo(W*.25,ry-u*.31);m.closePath();m.fill();m.globalAlpha=1;
-    let tx=-W*.02;for(const b of town){const bw=b.w*W,bh=b.h*u*2;m.fillStyle='#120f26';m.beginPath();m.moveTo(tx-bw*.1,ry-bh);m.lineTo(tx+bw*.5,ry-bh-bw*.22);m.lineTo(tx+bw*1.1,ry-bh);m.lineTo(tx+bw,ry);m.lineTo(tx,ry);m.fill();
+    let tx=-W*.02;for(const b of town){const bw=b.w*W,bh=b.h*u*2;m.fillStyle='#120f26';m.beginPath();m.moveTo(tx-bw*.1,ry-bh);m.lineTo(tx+bw*.5,ry-bh-bw*.22);m.lineTo(tx+bw*1.1,ry-bh);m.lineTo(tx+bw,ry);m.lineTo(tx,ry);m.fill();tx+=bw*.95}
+    roof(ry);
+    layO=mk2();m=layO.getContext('2d');m.setTransform(dpr,0,0,dpr,0,0);
+    m.fillStyle=m.createPattern(gc,'repeat');m.fillRect(0,0,W,H);const vg=m.createRadialGradient(W/2,H/2,u*.4,W/2,H/2,Math.hypot(W,H)*.62);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');m.fillStyle=vg;m.fillRect(0,0,W,H);
+    m=main;starIn=stars.map(([x,y])=>Math.hypot(x*W-mx,y*H-my)<mr*1.02);   // stars behind the moon stay hidden
+  }
+  function draw(){
+    const u=U();m.setTransform(1,0,0,1,0,0);if(!layA)buildLayers();m.drawImage(layA,0,0);m.setTransform(dpr,0,0,dpr,0,0);
+    m.fillStyle='#fff6d8';stars.forEach(([x,y,r,p],i)=>{if(starIn[i])return;m.globalAlpha=.35+.65*Math.abs(Math.sin(t*1.2+p));m.fillRect(x*W,y*H,r,r)});m.globalAlpha=1;
+    if(shoot){const k=shoot.t/0.9,x=shoot.x+k*shoot.dx,y=shoot.y+k*shoot.dy;const g=m.createLinearGradient(x,y,x-shoot.dx*.25,y-shoot.dy*.25);g.addColorStop(0,'rgba(255,250,220,'+(1-k)+')');g.addColorStop(1,'rgba(255,250,220,0)');m.strokeStyle=g;m.lineWidth=2;m.beginPath();m.moveTo(x,y);m.lineTo(x-shoot.dx*.25,y-shoot.dy*.25);m.stroke()}
+    const ry=H*.74,portrait=H>W;
+    const mx=W*(portrait?.68:.82),my=H*(portrait?.47:.36),mr=u*(portrait?.2:.17);
+    // wisps of cloud across the moon
+    m.fillStyle='rgba(40,32,80,.55)';for(const [o,yy,w] of [[0,.35,1.3],[.5,.6,1]]){const cx=mx+((t*.02*u+o*mr*4)%(mr*4))-mr*2;m.beginPath();m.roundRect(cx-w*mr*.6,my+yy*mr,w*mr*1.2,mr*.12,mr*.06);m.fill()}
+    m.setTransform(1,0,0,1,0,0);m.drawImage(layB,0,0);m.setTransform(dpr,0,0,dpr,0,0);
+    let tx=-W*.02;for(const b of town){const bw=b.w*W,bh=b.h*u*2;
       if(b.win){m.fillStyle='rgba(255,190,100,'+(.55+.25*Math.sin(t*2+b.wx*9))+')';m.fillRect(tx+bw*(.25+b.wx*.4),ry-bh*.6,Math.max(3,bw*.12),Math.max(3,bh*.22))}tx+=bw*.95}
     logo(W/2,H*(portrait?.23:.2),Math.min(u*(portrait?1:.95),W*.95));
-    roof(ry);
     // cats on the ridge
     const cs=u*(portrait?.27:.26),xs=portrait?[.24,.52,.8]:[.3,.5,.7],faces=[1,-1,-1];
-    cats.forEach((c,i)=>{c.tailT=t+i*1.7;c.bt-=1/60;if(c.bt<0){c.blink=.12;c.bt=2+R()*3}if(c.blink>0)c.blink-=1/60;
+    cats.forEach((c,i)=>{c.tailT=t+i*1.7;c.bt-=fdt;if(c.bt<0){c.blink=.12;c.bt=2+R()*3}if(c.blink>0)c.blink-=fdt;
       const s=i===1?cs*1.12:cs;m.save();m.globalAlpha=1;m.beginPath();m.ellipse(W*xs[i],ry-u*.01,s*.3,s*.04,0,0,7);m.fillStyle='rgba(0,0,0,.35)';m.fill();m.restore();
       drawCat(m,W*xs[i],ry-u*.012,s,dpr,c,faces[i],false)});
     lantern(W*(portrait?.9:.9),0,u*(portrait?.09:.075));lantern(W*(portrait?.1:.1),0,u*(portrait?.07:.06));
     // petals
-    for(const p of petals){p.y+=p.v*.0016;p.x+=Math.sin(t+p.p)*.0006-.0004;if(p.y>1.05){p.y=-.05;p.x=R()*1.1}if(p.x<-.05)p.x=1.05;
+    for(const p of petals){p.y+=p.v*.0016*fdt*60;p.x+=(Math.sin(t+p.p)*.0006-.0004)*fdt*60;if(p.y>1.05){p.y=-.05;p.x=R()*1.1}if(p.x<-.05)p.x=1.05;
       const s=u*.012*p.s;m.save();m.translate(p.x*W,p.y*H);m.rotate(t*p.v+p.p);m.scale(1,.55+.45*Math.sin(t*2*p.v+p.p));m.beginPath();m.moveTo(0,-s);m.quadraticCurveTo(s,-s*.2,0,s);m.quadraticCurveTo(-s,-s*.2,0,-s);m.fillStyle='#f7b8cc';m.fill();m.lineWidth=Math.max(1,s*.18);m.strokeStyle='rgba(23,18,14,.7)';m.stroke();m.restore()}
     // tap prompt
     const a=.7+.3*Math.sin(t*3.2),fs=Math.max(15,u*.042);m.font=`900 ${fs}px system-ui,-apple-system,sans-serif`;m.textAlign='center';m.textBaseline='middle';m.lineJoin='round';
     const py=ry+(H-ry)*.52;m.globalAlpha=a;m.lineWidth=fs*.3;m.strokeStyle=OL;m.strokeText('TAP ANYWHERE TO START',W/2,py);m.fillStyle='#f6e7c4';m.fillText('TAP ANYWHERE TO START',W/2,py);m.globalAlpha=1;
     // grain + vignette
-    m.fillStyle=grain;m.fillRect(0,0,W,H);const vg=m.createRadialGradient(W/2,H/2,u*.4,W/2,H/2,Math.hypot(W,H)*.62);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');m.fillStyle=vg;m.fillRect(0,0,W,H);
+    m.setTransform(1,0,0,1,0,0);m.drawImage(layO,0,0);m.setTransform(dpr,0,0,dpr,0,0);
     if(t<.6){m.fillStyle=`rgba(5,6,16,${1-t/.6})`;m.fillRect(0,0,W,H)}}
-  function loop(now){if(!run)return;const dt=Math.min(.05,(now-last)/1000);last=now;t+=dt;
+  function loop(now){if(!run)return;const raw=(now-last)/1000,dt=Math.min(.05,raw);last=now;t+=dt;fdt=dt;
+    // still struggling even with the cached layers: lower the title's pixel density a step (kept for this session)
+    if(t>1&&raw<.25){tEma+=(raw-tEma)*.1;if(tEma>1/40){tSlow+=raw;if(tSlow>1.2&&dpr>1.01){tCap=Math.max(1,dpr-.25);SS.setItem('titleCap',String(tCap));tSlow=0;tEma=1/60;resize()}}else tSlow=0}
     nextShoot-=dt;if(nextShoot<0){shoot={t:0,x:W*(.1+R()*.5),y:H*R()*.25,dx:W*.35,dy:H*.12};nextShoot=4+R()*5}if(shoot){shoot.t+=dt;if(shoot.t>.9)shoot=null}
     draw();requestAnimationFrame(loop)}
   requestAnimationFrame(loop);
-  const go=()=>{if(gone||t<.35)return;gone=true;try{sfx('tap')}catch(e){}if(store.get('welcomed',false))setTimeout(buildHubUI,250);el.classList.add('out');modalOpen=false;removeEventListener('keydown',key,true);
-    setTimeout(()=>{run=false;el.remove();removeEventListener('resize',resize)},500);if(!store.get('welcomed',false))setTimeout(showWelcome,350)};
+  setTimeout(()=>{try{window.draw()}catch(e){}},400);   // one hidden frame of the hub under the title, so its manor tiles are ready when the title lifts
+  const go=()=>{if(gone||t<.35)return;gone=true;titleCovers=false;try{sfx('tap')}catch(e){}if(store.get('welcomed',false))setTimeout(buildHubUI,250);el.classList.add('out');modalOpen=false;removeEventListener('keydown',key,true);
+    setTimeout(()=>{run=false;el.remove();removeEventListener('resize',resize);for(const c of [layA,layB,layO,logoC,cv])if(c)c.width=c.height=0},500);if(!store.get('welcomed',false))setTimeout(showWelcome,350)};
   const key=e=>{e.stopPropagation();e.preventDefault();go()};
   el.addEventListener('pointerdown',e=>e.stopPropagation());el.addEventListener('pointerup',e=>{e.stopPropagation();go()});addEventListener('keydown',key,true)}
 if(!location.hash)showTitle();else document.getElementById('title').remove();
@@ -3754,14 +3775,11 @@ let last=performance.now(),T=0,_dt=0,camTw=null;
 // a struggling Mac graphics process shows up as a very slow start (and then blank images). If the first frame on a desktop took over 10 s,
 // switch this tab to software canvases and reload once; ?cpu=0 in the address turns it back off
 let firstFrameChecked=false;
-if(window.CPU_AUTO)setTimeout(()=>{try{toast('Using lighter graphics: this browser was struggling')}catch(e){}},2500);
-function checkSlowBoot(){if(firstFrameChecked)return;firstFrameChecked=true;if(window.CPU_CANVAS||window.__bootHidden||matchMedia('(pointer:coarse)').matches)return;
-  if(performance.now()-(window.__bootT||0)>10000){try{sessionStorage.setItem('__cpuAuto','1');if(sessionStorage.getItem('__cpuAuto')==='1')location.reload()}catch(e){}}}
 function frame(now){
-  const dt=Math.min(.05,(now-last)/1000);last=now;_dt=dt;simAcc+=dt;let n=0;
+  const raw=(now-last)/1000,dt=Math.min(.05,raw);last=now;_dt=dt;simAcc+=dt;let n=0;perfWatch(raw);
   requestAnimationFrame(frame);   // scheduled first, so one bad frame can never stop the game loop for good
   while(simAcc>=SIM_DT&&n<12){simAcc-=SIM_DT;n++;runSimStep()}if(n>=12)simAcc=0;
-  try{frameRest(dt)}catch(e){console.error(e)}try{draw()}catch(e){console.error(e)}checkSlowBoot();
+  try{frameRest(dt)}catch(e){console.error(e)}if(!titleCovers)try{draw()}catch(e){console.error(e)}   // nothing to draw under the (opaque) title screen
 }
 function simStep(dt){
   for(const s of shutters){
