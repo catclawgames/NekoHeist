@@ -17,7 +17,10 @@ if(location.hash==='#home'||location.hash==='#heist'||location.hash==='#test'||l
    reading pixels back from a stuck graphics process can freeze the page. */
 (function(){var q='';try{q=location.search+(window.parent!==window?window.parent.location.search:'')}catch(e){q=location.search}
   try{localStorage.removeItem('__cpuCanvas')}catch(e){}   // left behind by the short-lived automatic check
-  var on=/[?&]cpu=1/.test(q);window.CPU_CANVAS=on;if(!on)return;
+  window.__bootT=performance.now();window.__bootHidden=document.hidden;document.addEventListener('visibilitychange',function(){if(document.hidden)window.__bootHidden=true});   // a background tab gets no frames: not a sign of slowness
+  var auto=false;try{auto=sessionStorage.getItem('__cpuAuto')==='1'}catch(e){}
+  if(/[?&]cpu=0/.test(q)){auto=false;try{sessionStorage.removeItem('__cpuAuto')}catch(e){}}
+  var on=/[?&]cpu=1/.test(q)||auto;window.CPU_CANVAS=on;window.CPU_AUTO=auto;if(!on)return;
   var g=HTMLCanvasElement.prototype.getContext;
   HTMLCanvasElement.prototype.getContext=function(t,o){if(t==='2d'&&this.id!=='c'&&this.id!=='tc'){o=Object.assign({willReadFrequently:true},o||{})}return g.call(this,t,o)};
 })();
@@ -3748,11 +3751,17 @@ function landFx(x,y){for(let k=0;k<10;k++){const d=k<5?-1:1;puff(x+d*(8+Math.ran
 
 /* ============ RENDER ============ */
 let last=performance.now(),T=0,_dt=0,camTw=null;
+// a struggling Mac graphics process shows up as a very slow start (and then blank images). If the first frame on a desktop took over 10 s,
+// switch this tab to software canvases and reload once; ?cpu=0 in the address turns it back off
+let firstFrameChecked=false;
+if(window.CPU_AUTO)setTimeout(()=>{try{toast('Using lighter graphics: this browser was struggling')}catch(e){}},2500);
+function checkSlowBoot(){if(firstFrameChecked)return;firstFrameChecked=true;if(window.CPU_CANVAS||window.__bootHidden||matchMedia('(pointer:coarse)').matches)return;
+  if(performance.now()-(window.__bootT||0)>10000){try{sessionStorage.setItem('__cpuAuto','1');if(sessionStorage.getItem('__cpuAuto')==='1')location.reload()}catch(e){}}}
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;_dt=dt;simAcc+=dt;let n=0;
   requestAnimationFrame(frame);   // scheduled first, so one bad frame can never stop the game loop for good
   while(simAcc>=SIM_DT&&n<12){simAcc-=SIM_DT;n++;runSimStep()}if(n>=12)simAcc=0;
-  try{frameRest(dt)}catch(e){console.error(e)}try{draw()}catch(e){console.error(e)}
+  try{frameRest(dt)}catch(e){console.error(e)}try{draw()}catch(e){console.error(e)}checkSlowBoot();
 }
 function simStep(dt){
   for(const s of shutters){
