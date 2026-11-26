@@ -3130,7 +3130,9 @@ async function linkAccount(kind){const A=FB.mods.auth,au=FB.auth;let cred=null;
         // sign in with the credential from the first popup; if that's missing or rejected (it happens on some browsers), open a fresh sign-in popup
         let ok=false,why='';if(c2){try{await A.signInWithCredential(au,c2);ok=true}catch(e2){why=e2&&e2.code||''}}
         if(!ok&&!nativeAuth()){try{await A.signInWithPopup(au,kind==='google'?new A.GoogleAuthProvider():new A.OAuthProvider('apple.com'));ok=true}catch(e3){why=e3&&e3.code||why}}
-        if(ok){if(oid&&old){try{await old.delete()}catch(_){}}SS.setItem('forceCloud','1');location.reload()}
+        // note: don't delete the old guest *login* here: Firebase's user.delete() also signs out whoever is signed in now (the account we just
+        // switched to), which dropped players back to a new guest. Its manor and save are already gone, so the leftover login is harmless
+        if(ok){SS.setItem('forceCloud','1');location.reload()}
         else{if(oid){csDoc=ONLINE.collection('data/users/'+oid).doc('save');CLOUD_READY=true;publishBase();csPush(true)}toast('Could not sign in'+(why?' ('+why.replace('auth/','')+')':''));renderAccount()}}}
     else if(code!=='auth/popup-closed-by-user'&&code!=='auth/cancelled-popup-request')toast('Could not link the account'+(code?' ('+code.replace('auth/','')+')':''))}}
 function confirmSwitch(){return new Promise(res=>{const row=document.getElementById('acctRow');if(!row)return res(false);row.innerHTML='';
