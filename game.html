@@ -3214,8 +3214,10 @@ async function pickOpponent(){if(!ONLINE||!MYID)return null;const rows=async q=>
   const r=pick,base=cleanBase(r.data);let name=typeof r.data.name==='string'&&r.data.name.trim()?r.data.name.slice(0,16):'';if(!name){try{const ps=await USERS.profiles([r.id]);name=(ps&&ps[r.id]&&ps[r.id].name)||'Someone'}catch(e){name='Someone'}}
   return{id:r.id,name,rank:r.data.rank|0,base,revenge}}
 function noteOpponent(id){const L=prog.get('recentOpps',[]).filter(x=>x!==id);L.push(id);prog.set('recentOpps',L.slice(-RECENT_N))}
+// replay input log: stored as JSON text (Firestore can't hold arrays inside arrays); older raids in the Claude version stored the array itself
+function raidEvents(r){try{return typeof r.ev==='string'?JSON.parse(r.ev):Array.isArray(r.ev)?r.ev:[]}catch(e){return[]}}
 function sendRaid(win){if(!ONLINE||!MYID||!OPP)return;try{const id=MYID+'_'+Date.now().toString(36);
-  ONLINE.doc('raids/'+id).set({attacker:MYID,attackerName:PNAME,defender:OPP.id,win:!!win,at:Date.now(),arank:RANK,drank:typeof OPP.rank==='number'?OPP.rank:RANK,league:LEAGUE.n,seed:REC.seed,dt:SIM_DT,ev:REC.ev,team:cats.map(c=>c.k.name),base:OPP.base,v:1,gv:GAME_V}).catch(()=>{})}catch(e){}}
+  ONLINE.doc('raids/'+id).set({attacker:MYID,attackerName:PNAME,defender:OPP.id,win:!!win,at:Date.now(),arank:RANK,drank:typeof OPP.rank==='number'?OPP.rank:RANK,league:LEAGUE.n,seed:REC.seed,dt:SIM_DT,ev:JSON.stringify(REC.ev),team:cats.map(c=>c.k.name),base:OPP.base,v:1,gv:GAME_V}).catch(()=>{})}catch(e){}}
 const GAME_V=17; // bump whenever gameplay changes, so older replays are marked instead of playing back wrong
 const RAID_KEEP_DAYS=30,RAID_KEEP_MAX=40;
 const DEF_WIN=12,DEF_LOSS=10; // your rank when someone raids you, at equal ranks: + for a base that held, - for a robbery
@@ -3246,7 +3248,7 @@ async function openRaidLog(){prog.set('unreadRaids',0);updateRaidDot();
     const left=document.createElement('span');const who=document.createElement('b');who.textContent=(typeof r.attackerName==='string'&&r.attackerName.trim()?r.attackerName.slice(0,16):'')||(ps[r.attacker]&&ps[r.attacker].name)||'Someone';left.appendChild(who);
     const sm=document.createElement('small');sm.textContent=(r.win?'Robbed you':'Got caught')+' · '+timeAgo(r.at);left.appendChild(sm);row.appendChild(left);
     const tag=document.createElement('span');tag.className='rk';{const dd=defDelta(r);tag.textContent=(dd>=0?'+':'')+dd}row.appendChild(tag);
-    const w=document.createElement('button');w.className='btn';w.textContent='Watch';w.onclick=()=>{try{SS.setItem('replay',JSON.stringify({dt:r.dt||1/60,seed:r.seed,ev:r.ev||[],team:r.team||[],base:cleanBase(r.base),name:who.textContent,win:r.win}))}catch(e){}
+    const w=document.createElement('button');w.className='btn';w.textContent='Watch';w.onclick=()=>{try{SS.setItem('replay',JSON.stringify({dt:r.dt||1/60,seed:r.seed,ev:raidEvents(r),team:r.team||[],base:cleanBase(r.base),name:who.textContent,win:r.win}))}catch(e){}
       closePanel();sfx('whoosh');trans={t:0,phase:'close',retry:true,replay:true}};if(!cleanBase(r.base))w.disabled=true;if(r.gv!==GAME_V){w.disabled=true;w.textContent='Old';w.title='Recorded in an older version of the game'}row.appendChild(w);body.appendChild(row)}}
 function replayEnd(win,ct){sfx(win?'lose':'win');const ov=document.getElementById('endScreen');ov.classList.toggle('lose',!!win);ov.querySelector('.card').classList.toggle('win',!win);ov.style.display='flex';requestAnimationFrame(()=>ov.classList.add('show'));
   ov.querySelector('h2').textContent=win?'They got away':'Your base held!';ov.querySelector('p.sub2').textContent=win?`${REPLAY.name} escaped with your treasure.`:`${REPLAY.name}\'s cats were all caught or knocked out.`;
