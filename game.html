@@ -118,6 +118,7 @@ window.NEKO_FIREBASE = null;
   #endScreen .sub2{margin:0 0 6px;font:600 13.5px system-ui;opacity:.9}
   #endScreen .card.win .reveal{min-height:150px}
   #endScreen .chestBox{position:relative;cursor:pointer}#profBtn.nudge{position:relative}#profBtn.nudge::after{content:'';position:absolute;top:4px;left:56px;width:14px;height:14px;border-radius:50%;background:#e8483c;border:2.5px solid #17120e;animation:pulse 1s infinite alternate}
+  #endScreen .rankNote{font:700 11.5px system-ui;color:#f3e2b8;opacity:.75;text-align:center;margin:4px 0 2px}
   #endScreen .chestBox canvas{width:200px;height:240px;display:block;margin:-47px auto;pointer-events:none}#endScreen h2,#endScreen .sub2,#endScreen .tapHint,#endScreen .reveal,#endScreen .row{position:relative}
   #endScreen .tapHint{font:800 13px system-ui;color:#ffd45a;animation:pulse 1s infinite alternate}
   @keyframes pulse{from{opacity:.5;transform:scale(.96)}to{opacity:1;transform:scale(1.04)}}
@@ -3029,7 +3030,7 @@ function drawTrans(c){if(!trans)return;const R=Math.hypot(SW,SHh)*.6;let r;
   const ta=trans.phase==='wait'||(trans.phase==='hold'&&trans.short)?1:trans.phase==='hold'?Math.min(1,trans.t/.15):trans.phase==='close'?Math.max(0,(trans.t/T_CLOSE-.7)/.3):Math.max(0,1-trans.t/.25);
   if(ta>0&&!(trans.home&&!trans.league)&&!trans.retry){c.globalAlpha=ta;const sc=trans.phase==='hold'?1+.08*Math.sin(Math.min(1,trans.t/.3)*Math.PI):1;c.translate(cx,cy);c.scale(sc,sc);
     const T1=trans.league?trans.league.toUpperCase():trans.home?'HOME':'HEIST!';c.font=`900 ${trans.league?32:44}px system-ui,-apple-system,sans-serif`;c.textAlign='center';c.lineJoin='round';c.lineWidth=10;c.strokeStyle=OUT;c.strokeText(T1,0,0);c.fillStyle='#ffd45a';c.fillText(T1,0,0);if(trans.home&&!trans.league){c.restore();return}if(trans.league){c.font='800 15px system-ui';c.lineWidth=5;c.strokeText('Welcome to a new manor',0,32);c.fillStyle='#f3e2b8';c.fillText('Welcome to a new manor',0,32);c.restore();return}
-    const SUB=REPLAY?`Replay: ${REPLAY.name} robbing your manor`:TEST_HEIST?'Testing your own base':OPP?`Robbing ${OPP.name}\'s manor`:'Steal the treasure. Don\'t get caught.';c.font='700 14px system-ui,-apple-system,sans-serif';c.lineWidth=5;c.strokeText(SUB,0,30);c.fillStyle='#f3e2b8';c.fillText(SUB,0,30)}
+    const SUB=REPLAY?`Replay: ${REPLAY.name} robbing your manor`:TEST_HEIST?'Testing your own base':!ONLINE&&OPP?`Practice: ${OPP.name}\'s manor (offline)`:OPP?`Robbing ${OPP.name}\'s manor`:'Steal the treasure. Don\'t get caught.';c.font='700 14px system-ui,-apple-system,sans-serif';c.lineWidth=5;c.strokeText(SUB,0,30);c.fillStyle='#f3e2b8';c.fillText(SUB,0,30)}
   c.restore()}
 document.getElementById('teamBtn').addEventListener('click',openTeam);
 
@@ -3114,8 +3115,8 @@ async function initFirebase(){const cfg=window.NEKO_FIREBASE;if(!cfg||!cfg.apiKe
 // costs 1.5x the rank a loss would have, since the defender never gets the replay or their points. The marker is part of the save,
 // so it follows the account to other devices; it's cleared when the heist ends normally
 const QUIT_MUL=1.5;
-function markHeistStart(){if(TEST_HEIST||REPLAY)return;const opR=OPP&&!OPP.cpu&&typeof OPP.rank==='number'?OPP.rank:RANK;
-  prog.set('heistInProgress',{d:rankDelta(false,opR),opp:String(OPP&&OPP.name||'').replace(/[<>&"]/g,'').slice(0,16),at:Date.now()})}
+function markHeistStart(){if(TEST_HEIST||REPLAY)return;const d=scaledRankDelta(false);if(!d)return;   // offline practice: nothing to lose, no penalty
+  prog.set('heistInProgress',{d,opp:String(OPP&&OPP.name||'').replace(/[<>&"]/g,'').slice(0,16),at:Date.now()})}
 function clearHeistMark(){if(prog.get('heistInProgress',null))prog.set('heistInProgress',null)}
 let quitChecked=false;
 function applyQuitPenalty(){if(quitChecked||MODE!=='hub'||TEST_HEIST||REPLAY)return;quitChecked=true;const m=prog.get('heistInProgress',null);if(!m)return;
@@ -3601,9 +3602,15 @@ function toast(t){const el=document.getElementById('toast');el.textContent=t;el.
 // ---- Results: chest reward, rank change, promotion / demotion ----
 let result=null;
 function setEbal(v){document.querySelector('#endScreen .ebal').innerHTML=`<i class="coin"></i><span id="ebalN">${v}</span>`}
-function startResults(win,ct){sfx(win?'win':'lose');const oldR=RANK,oldL=LEAGUE,d=rankDelta(win,OPP&&!OPP.cpu&&typeof OPP.rank==='number'?OPP.rank:RANK),newR=Math.max(0,RANK+d),L2=leagueOf(newR),gold=win?Math.round(oldL.reward[0]+Math.random()*(oldL.reward[1]-oldL.reward[0])):0;
+// rank only fully counts online against real players: offline heists are practice (no rank, half coins); a computer manor used as a
+// fallback while online moves rank half as much. Stops farming the fixed computer manors offline to climb the leagues
+const OFFLINE_COIN_MUL=.5,CPU_RANK_MUL=.5;
+function heistKind(){return !ONLINE?'offline':OPP&&OPP.cpu?'cpu':'real'}
+function scaledRankDelta(win){const k=heistKind();if(k==='offline')return 0;const d=rankDelta(win,OPP&&!OPP.cpu&&typeof OPP.rank==='number'?OPP.rank:RANK);
+  return k==='cpu'?Math.sign(d)*Math.max(1,Math.round(Math.abs(d)*CPU_RANK_MUL)):d}
+function startResults(win,ct){sfx(win?'win':'lose');const kind=heistKind(),oldR=RANK,oldL=LEAGUE,d=scaledRankDelta(win),newR=Math.max(0,RANK+d),L2=leagueOf(newR),gold0=win?Math.round(oldL.reward[0]+Math.random()*(oldL.reward[1]-oldL.reward[0])):0,gold=kind==='offline'?Math.round(gold0*OFFLINE_COIN_MUL):gold0;
   setEbal(COINS);RANK=newR;BEST=Math.max(BEST,RANK);COINS+=gold;saveProg();prog.set('pendingLeague',L2.n!==oldL.n?{from:oldL.n,to:L2.n}:null);
-  result={win,ct,oldR,newR,d,oldL,L2,gold,stage:win?'chest':'rank',t:0,opened:false,shown:0};
+  result={win,ct,oldR,newR,d,oldL,L2,gold,kind,stage:win?'chest':'rank',t:0,opened:false,shown:0};
   const ov=document.getElementById('endScreen');ov.classList.toggle('lose',!win);ov.querySelector('.card').classList.toggle('win',win);ov.style.display='flex';requestAnimationFrame(()=>ov.classList.add('show'));
   ov.querySelector('h2').textContent=win?'Heist complete!':'No cats left';ov.querySelector('p.sub2').textContent=win?`${ct.k.name} escaped with ${OPP?OPP.name+'\'s':'the'} treasure.`:OPP?`${OPP.name}\'s base held. Every cat was caught or knocked out.`:'Every cat was caught or knocked out.';
   const rv=ov.querySelector('.reveal');rv.innerHTML='';ov.querySelector('.row').innerHTML='';ov.querySelector('.chestBox').style.display=win?'':'none';ov.querySelector('.tapHint').style.display=win?'':'none';
@@ -3614,7 +3621,7 @@ function countTo(id,to,ms,from=0){const t0=performance.now(),el=()=>document.get
 function showRank(){const r=result,ov=document.getElementById('endScreen'),rv=ov.querySelector('.reveal');
   const N=nextLeague(r.oldL),p0=leagueProgress(r.oldR);
   rv.insertAdjacentHTML('beforeend',`<div class="rankBox">${leagueBadge(r.oldL,34)}<div class="rk"><div class="rl">${leagueTitle(r.oldR)}</div><div class="rn"><b id="rankN">${r.oldR}</b><span class="${r.d>=0?'up':'down'}">${r.d>=0?'+':''}${r.d}</span></div>
-    <div class="pb big"><i id="rankBar" style="width:${Math.round(p0*100)}%"></i></div></div></div>`);
+    <div class="pb big"><i id="rankBar" style="width:${Math.round(p0*100)}%"></i></div></div></div>${r.kind==='offline'?'<div class="rankNote">Offline practice · rank only changes online · half coins</div>':r.kind==='cpu'?'<div class="rankNote">No players found · computer manor · half rank</div>':''}`);
   setTimeout(()=>{countTo('rankN',r.newR,800,r.oldR);if(r.d>0)sfx('rankUp');const bar=document.getElementById('rankBar');
     const tierUp=r.L2.n===r.oldL.n&&tierOf(r.newR)!==tierOf(r.oldR),crossed=r.L2.n!==r.oldL.n||tierUp,upw=r.L2.n>r.oldL.n||(tierUp&&tierOf(r.newR)>tierOf(r.oldR));bar.style.transition='width .8s cubic-bezier(.3,.9,.3,1)';bar.style.width=(crossed?(upw?100:0):Math.round(leagueProgress(r.newR)*100))+'%';
     setTimeout(()=>{if(crossed)leagueChange();else finishResults()},950)},250)}
