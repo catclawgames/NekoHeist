@@ -1,15 +1,12 @@
 /* ===== Neko Heist online settings =====
-   1. In the Firebase console open Project settings > General > Your apps > (Web app) > SDK setup and configuration > "Config".
-   2. Copy the values into the object below (replace null).
-   With this left as null the game still runs, but offline only (computer manors, progress saved on the device).
-
-window.NEKO_FIREBASE = {
-  apiKey: "AIza...",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abc123"
+   Firebase project: nekoheist-90c0a (Firebase console > Project settings > General > Your apps > Neko Heist Web).
+   These values are meant to be public: security comes from the Firestore rules (firestore.rules).
+   Set this to null to run offline only (computer manors, progress saved on the device). */
+window.NEKO_FIREBASE = window.NEKO_FIREBASE || {
+  apiKey: "AIzaSyB4UcH2-hHS_4_pa3DOOox5MQImMHlLFfU",
+  authDomain: "nekoheist-90c0a.firebaseapp.com",
+  projectId: "nekoheist-90c0a",
+  storageBucket: "nekoheist-90c0a.firebasestorage.app",
+  messagingSenderId: "524285235680",
+  appId: "1:524285235680:web:675be2ff583b59f9199b85"
 };
-*/
-window.NEKO_FIREBASE = window.NEKO_FIREBASE || null;
