@@ -27,6 +27,10 @@ window.NEKO_FIREBASE = null;
   html,body{margin:0;height:100%;background:#0b0e1e;overflow:hidden;touch-action:none;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:system-ui,-apple-system,sans-serif;color:#e8ecff}
   #c{position:fixed;inset:0;width:100%;height:100%;display:block}
+  /* first arrival in the hub: the buttons pop into place one after another */
+  html.uiPre #hubTop,html.uiPre #hubLeft,html.uiPre #hubUI{opacity:0}
+  html.uiBuild .ub{animation:ubIn .55s cubic-bezier(.25,1.55,.45,1) both;animation-delay:var(--d,0s)}
+  @keyframes ubIn{0%{opacity:0;transform:translate(var(--fx,0px),var(--fy,24px)) scale(.55) rotate(var(--fr,0deg))}60%{opacity:1}100%{opacity:1;transform:none}}
   #tc{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:18}  /* the circle transition, above every button */
   html.uilock #hubTop,html.uilock #hubTop *,html.uilock #hubLeft,html.uilock #hubLeft *,html.uilock #hubUI,html.uilock #hubUI *{pointer-events:none!important}
   .corner{position:fixed;bottom:0;border:3px solid #17120e;padding:0;margin:0;background:linear-gradient(160deg,#7a5530,#4e341b);
@@ -3504,10 +3508,15 @@ function showWelcome(){const el=document.getElementById('welcome'),page=el.query
     if(P.name){const inp=document.createElement('input');inp.maxLength=16;inp.placeholder='Player';inp.value=PNAME;inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')btn.click()});page.appendChild(inp);setTimeout(()=>inp.focus(),50)}
     dots.innerHTML=pages.map((_,k)=>`<i class="${k===i?'on':''}"></i>`).join('');btn.textContent=i===pages.length-1?"Let's go!":'Next'};
   btn.onclick=()=>{sfx('tap');if(pages[i].name){const inp=page.querySelector('input');PNAME=(inp.value||'').replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,16);store.set('playerName',PNAME);showName();publishBase()}
-    if(i<pages.length-1){i++;render();return}store.set('welcomed',true);el.style.display='none';modalOpen=false};
+    if(i<pages.length-1){i++;render();return}store.set('welcomed',true);el.style.display='none';modalOpen=false;if(document.documentElement.classList.contains('uiPre'))setTimeout(buildHubUI,150)};
   el.addEventListener('pointerdown',e=>e.stopPropagation());render();el.style.display='flex'}
 // ---- title screen ----
-function showTitle(){
+// the hub "builds itself" the first time you arrive: each button flies in from its own side, staggered
+function buildHubUI(){const H=document.documentElement,list=[['profBtn',-60,0,-6],['leagueBar',-70,0,0],['coinPill',-70,0,0],['lbBtn',0,-50,8],['raidBtn',0,-50,-8],['setBtn',0,-50,10],
+    ['marketBtn',-70,20,-8],['secBtn',-70,20,6],['teamChips',40,30,0],['teamBtn',0,50,-6],['heistBtn',30,60,4]];
+  list.forEach(([id,fx,fy,fr],i)=>{const el=document.getElementById(id);if(!el)return;el.classList.add('ub');el.style.setProperty('--d',(.06*i)+'s');el.style.setProperty('--fx',fx+'px');el.style.setProperty('--fy',fy+'px');el.style.setProperty('--fr',fr+'deg')});
+  H.classList.remove('uiPre');H.classList.add('uiBuild');setTimeout(()=>{H.classList.remove('uiBuild');list.forEach(([id])=>{const el=document.getElementById(id);if(el)el.classList.remove('ub')})},1400)}
+function showTitle(){document.documentElement.classList.add('uiPre');
   const el=document.getElementById('title'),cv=el.querySelector('canvas'),m=cv.getContext('2d');modalOpen=true;
   let W=0,H=0,dpr=1,t=0,last=performance.now(),run=true,gone=false,grain,shoot=null,nextShoot=2.5;
   const R=Math.random,cats=[1,0,2].map(i=>({k:COATS[i],slot:i,pose:{},walk:0,tailT:i*1.7,blink:0,earT:0,hp:1,bt:1+R()*3}));
@@ -3603,7 +3612,7 @@ function showTitle(){
     nextShoot-=dt;if(nextShoot<0){shoot={t:0,x:W*(.1+R()*.5),y:H*R()*.25,dx:W*.35,dy:H*.12};nextShoot=4+R()*5}if(shoot){shoot.t+=dt;if(shoot.t>.9)shoot=null}
     draw();requestAnimationFrame(loop)}
   requestAnimationFrame(loop);
-  const go=()=>{if(gone||t<.35)return;gone=true;try{sfx('tap')}catch(e){}el.classList.add('out');modalOpen=false;removeEventListener('keydown',key,true);
+  const go=()=>{if(gone||t<.35)return;gone=true;try{sfx('tap')}catch(e){}if(store.get('welcomed',false))setTimeout(buildHubUI,250);el.classList.add('out');modalOpen=false;removeEventListener('keydown',key,true);
     setTimeout(()=>{run=false;el.remove();removeEventListener('resize',resize)},500);if(!store.get('welcomed',false))setTimeout(showWelcome,350)};
   const key=e=>{e.stopPropagation();e.preventDefault();go()};
   el.addEventListener('pointerdown',e=>e.stopPropagation());el.addEventListener('pointerup',e=>{e.stopPropagation();go()});addEventListener('keydown',key,true)}
