@@ -1384,13 +1384,14 @@ function resize(){
   dpr=Math.min(window.devicePixelRatio||1,2.5);SW=innerWidth;SHh=innerHeight;
   // keep the backing canvas under ~8 megapixels: Safari caps total canvas memory, and a full-res canvas on a big Retina window blows past it (the scene goes blank)
   while(dpr>1&&SW*SHh*dpr*dpr>6e6)dpr=Math.max(1,dpr-.25);
+  if(window.CPU_CANVAS)dpr=1;   // software-canvas mode (?cpu=1): every image is copied to the screen by the CPU, so draw at 1x to keep it smooth
   cv.width=SW*dpr;cv.height=SHh*dpr;tcv.width=1;tcv.height=1;tcDirty=true;
   const PHONE=matchMedia('(pointer:coarse)').matches&&SHh>SW&&SW<700;
   safeTop=Math.max(parseFloat(getComputedStyle(document.getElementById('safe')).paddingTop)||0,(SHh>SW&&SW<760)?54:0);
   document.getElementById('hint').style.top=(safeTop+78)+'px';
   safeBot=Math.max(parseFloat(getComputedStyle(document.getElementById('safe')).paddingBottom)||0,PHONE?30:0);
   RHv=Math.round(Math.max(SHh<520?96:130,Math.min(220,SHh*.2)));UB=Math.round((SHh<520?10:20)+safeBot);CR=0;
-  const want=Math.max(1,Math.min(2.2,Math.sqrt(7e6/(BW*BH)),zSel()*dpr*1.35));
+  const want=window.CPU_CANVAS?1:Math.max(1,Math.min(2.2,Math.sqrt(7e6/(BW*BH)),zSel()*dpr*1.35));
   // rebuild the big manor bitmap only when noticeably more detail is needed (not on every rotation), and hand the old one's memory back first:
   // Safari has a hard cap on canvas memory and fails to create new canvases if old ones are still around
   if(!manor||want>RES*1.2){RES=manor?Math.max(RES,want):want;freeManor();buildManor();buildShutter();cloudImgs=[];buildBG();buildRoad();buildVault()}
