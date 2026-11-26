@@ -1510,6 +1510,7 @@ cv.addEventListener('pointermove',e=>{if(isHub()){hubMove(e);return}const p=ptrs
     const c=press.cat,press_card=press.card;press=null;
     if(c.cell&&press_card){selectCat(c);camFollow=true;anim=null;swipe=null;tap=null;vel={x:0,y:0};return} // dragging a placed cat's portrait just switches to it
     if(c.cell){if(c!==selCat){selectCat(c);camFollow=true;anim=null}tap=null} // a swipe that starts on a cat in the manor still swipes (that cat)
+    else if(REPLAY){}   // watching a replay: cats waiting on their cards can't be dragged in
     else{const sz=c.cell?CAT_WORLD*cam.z:roadCatSize();drag={cat:c,from:c.cell,x:e.clientX,y:e.clientY,sz,hover:-1,id:e.pointerId};c.dragging=true;swipe=null;hideHint();return}}
   if(tap&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>9)tap=null;
   if(swipe&&isPOV()&&ptrs.size===1){const sx=e.clientX-swipe.x,sy=e.clientY-swipe.y;
@@ -1525,7 +1526,8 @@ function dropCat(){
 }
 function up(e){if(isHub()){hubUp(e);return}ptrs.delete(e.pointerId);
   if(drag&&e.pointerId===drag.id){dropCat();return}
-  if(press&&e.pointerId===press.id){if(press.cat===selCat&&!press.card&&(vaultAction(press.cat)||vaultSoon(press.cat))){doInteract();press=null;tap=null;swipe=null;return}
+  if(press&&e.pointerId===press.id){if(REPLAY&&!press.cat.cell){press=null;tap=null;swipe=null;return}   // replay: undeployed cats can't be picked up either
+    if(press.cat===selCat&&!press.card&&(vaultAction(press.cat)||vaultSoon(press.cat))){doInteract();press=null;tap=null;swipe=null;return}
     selectCat(press.cat===selCat&&!press.cat.cell?null:press.cat);if(press.cat.cell){camFollow=true;anim=null}press=null;tap=null;swipe=null;vel={x:0,y:0};hideHint();return}
   swipe=null;
   if(tap&&ptrs.size===0&&performance.now()-tap.t<400){tapBalcony(tap.x,tap.y);vel={x:0,y:0}}
