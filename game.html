@@ -2820,6 +2820,8 @@ function hubPick(h){const prev=h.act;let a;do{a=HUB_ACTS[Math.floor(Math.random(
   const x0=cellX0(h.c)+34,x1=cellX0(h.c)+ROOM-34;h.tx=x0+Math.random()*(x1-x0);
   if(a==='play')h.ball={x:h.x+h.face*30,vx:0,y:0,vy:0}}
 hubCats.forEach(h=>hubPick(h));
+// the ball bounces off the visible pillars between rooms (16px wide inside, 20px at the balcony ends), not an invisible line inside the room
+function ballWall(c){const R=7,x0=cellX0(c),x1=x0+ROOM,hl=c===1?10:8,hr=c===NR?10:8;return[x0+hl+R,x1-hr-R]}
 function updateHub(dt){
   for(const h of hubCats){h.t+=dt;h.tailT+=dt*2;h.blinkT-=dt;if(h.blinkT<0){h.blink=.13;h.blinkT=2+Math.random()*4}if(h.blink>0)h.blink-=dt;
     h.earT=(h.earT||0)-dt;if(h.earT<-.2&&Math.random()<dt*.25)h.earT=.22;
@@ -2828,7 +2830,7 @@ function updateHub(dt){
     else if(h.act==='nap'){const q=Math.min(1,h.t/.6),out=Math.max(0,1-(h.dur-h.t)/.5);const k=q*(1-out);P={crouch:k,sy:1-.14*k,sx:1+.08*k,headRot:.35*k,tailA:-2.9,tailCurl:.2};if(k>.5)h.blink=1;
       if(out>0&&h.blink===1)h.blink=0}
     else if(h.act==='groom'){const q=Math.min(1,h.t/.4)*Math.min(1,(h.dur-h.t)/.4);P={crouch:.45*q,reach:q*(.55+.35*Math.sin(h.t*9)),headRot:.25*q+Math.sin(h.t*9)*.05*q,tailA:-2.6,tailCurl:.5};if(q>.6&&Math.sin(h.t*4)>.3)h.blink=1;else if(h.blink===1)h.blink=0}
-    else if(h.act==='play'){const b=h.ball;b.vy+=900*dt;b.y+=b.vy*dt;if(b.y>0){b.y=0;b.vy*=-.4}b.x+=b.vx*dt;b.vx*=Math.exp(-dt*2.2);if(b.x<x0||b.x>x1){b.vx*=-.7;b.x=Math.max(x0,Math.min(x1,b.x))}
+    else if(h.act==='play'){const b=h.ball;b.vy+=900*dt;b.y+=b.vy*dt;if(b.y>0){b.y=0;b.vy*=-.4}b.x+=b.vx*dt;b.vx*=Math.exp(-dt*2.2);const bl=ballWall(h.c);if(b.x<bl[0]||b.x>bl[1]){b.vx=(b.x<bl[0]?1:-1)*Math.abs(b.vx)*.7;b.x=Math.max(bl[0],Math.min(bl[1],b.x))}
       const d=b.x-h.x;if(Math.abs(d)>14)h.face=Math.sign(d); // hysteresis: no flip-flopping when the ball is right underfoot
       if(Math.abs(d)>34){h.x+=h.face*Math.min(Math.abs(d)-30,90*dt);h.walk+=dt*20;h.moving=true;P={crouch:.35,tailA:-2.4}}
       else{const s=Math.sin(h.t*7);P={crouch:.5-.3*Math.max(0,s),reach:Math.max(0,s),tailA:-2.2+Math.sin(h.t*12)*.3,tailCurl:.2,headRot:-.1};if(s>.95&&Math.abs(b.vx)<40){b.vx=h.face*(120+Math.random()*120);b.vy=-160-Math.random()*120}}}
