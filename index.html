@@ -541,6 +541,7 @@ function grainPass(cv,fine,blotch){
   c.globalAlpha=1;c.globalCompositeOperation='destination-in';c.drawImage(cv,0,0);
   const m=cv.getContext('2d');m.save();m.setTransform(1,0,0,1,0,0);m.globalCompositeOperation='soft-light';m.drawImage(L,0,0);
   m.globalCompositeOperation='source-atop';m.globalAlpha=.25;m.drawImage(L,0,0);m.restore();
+  L.width=L.height=0;   // give the temporary layer's memory back right away (Safari counts it until garbage collection otherwise)
 }
 function post(m,cx,y0,y1,w,col){
   const x=cx-w/2;wood(m,x,y0,w,y1-y0,col||TH.post,'v');
@@ -1358,14 +1359,14 @@ let roadC=null,roadKey='';
 function resize(){
   dpr=Math.min(window.devicePixelRatio||1,2.5);SW=innerWidth;SHh=innerHeight;
   // keep the backing canvas under ~8 megapixels: Safari caps total canvas memory, and a full-res canvas on a big Retina window blows past it (the scene goes blank)
-  while(dpr>1&&SW*SHh*dpr*dpr>8e6)dpr=Math.max(1,dpr-.25);
+  while(dpr>1&&SW*SHh*dpr*dpr>6e6)dpr=Math.max(1,dpr-.25);
   cv.width=SW*dpr;cv.height=SHh*dpr;tcv.width=1;tcv.height=1;tcDirty=true;
   const PHONE=matchMedia('(pointer:coarse)').matches&&SHh>SW&&SW<700;
   safeTop=Math.max(parseFloat(getComputedStyle(document.getElementById('safe')).paddingTop)||0,(SHh>SW&&SW<760)?54:0);
   document.getElementById('hint').style.top=(safeTop+78)+'px';
   safeBot=Math.max(parseFloat(getComputedStyle(document.getElementById('safe')).paddingBottom)||0,PHONE?30:0);
   RHv=Math.round(Math.max(SHh<520?96:130,Math.min(220,SHh*.2)));UB=Math.round((SHh<520?10:20)+safeBot);CR=0;
-  const want=Math.max(1,Math.min(2.2,Math.sqrt(9e6/(BW*BH)),zSel()*dpr*1.35));
+  const want=Math.max(1,Math.min(2.2,Math.sqrt(7e6/(BW*BH)),zSel()*dpr*1.35));
   // rebuild the big manor bitmap only when noticeably more detail is needed (not on every rotation), and hand the old one's memory back first:
   // Safari has a hard cap on canvas memory and fails to create new canvases if old ones are still around
   if(!manor||want>RES*1.2){RES=manor?Math.max(RES,want):want;freeManor();buildManor();buildShutter();cloudImgs=[];buildBG();buildRoad();buildVault()}
