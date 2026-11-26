@@ -28,7 +28,7 @@ window.NEKO_FIREBASE = null;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:system-ui,-apple-system,sans-serif;color:#e8ecff}
   #c{position:fixed;inset:0;width:100%;height:100%;display:block}
   #tc{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:18}  /* the circle transition, above every button */
-  html.uilock #hubTop,html.uilock #hubLeft,html.uilock #hubUI,html.uilock #leagueBar,html.uilock #coinPill{pointer-events:none}
+  html.uilock #hubTop,html.uilock #hubTop *,html.uilock #hubLeft,html.uilock #hubLeft *,html.uilock #hubUI,html.uilock #hubUI *{pointer-events:none!important}
   .corner{position:fixed;bottom:0;border:3px solid #17120e;padding:0;margin:0;background:linear-gradient(160deg,#7a5530,#4e341b);
     box-shadow:inset 0 3px 0 rgba(255,220,160,.25),inset 0 -4px 0 rgba(0,0,0,.25);color:#f3e2b8;font:800 12px system-ui,-apple-system,sans-serif;letter-spacing:.5px;z-index:3}
   .corner.left{left:0;border-left:0;border-bottom:0;border-top-right-radius:100%}
@@ -2907,7 +2907,7 @@ document.getElementById('heistBtn').addEventListener('click',async e=>{if(trans|
   OPP=!prog.get('firstRunDone',false)?firstManor():await withTimeout(pickOpponent(),5000).catch(()=>null);if(!OPP)OPP=cpuOpponent();try{OPP?SS.setItem('opp',JSON.stringify(OPP)):SS.removeItem('opp')}catch(err){}
   // found someone: a quick "GO!" pop on the button, then into the heist
   b.textContent='GO!';b.classList.remove('go');void b.offsetWidth;b.classList.add('go');sfx('heistGo');
-  setTimeout(()=>{startHeist();finding=false;document.documentElement.classList.remove('uilock');setTimeout(()=>{b.classList.remove('go');b.textContent=txt},1200)},380)});   // everything stays locked from the first tap until the transition takes over
+  setTimeout(()=>{startHeist();finding=false;setTimeout(()=>{b.classList.remove('go');b.textContent=txt},1200)},380)});   // everything stays locked from the first tap until the transition takes over
 let trans=null;
 function goHome(){if(trans)return;sfx('whoosh');const ov=document.getElementById('endScreen');ov.classList.remove('show');setTimeout(()=>ov.style.display='none',350);trans={t:0,phase:'close',home:true}}const T_CLOSE=.45,T_HOLD=.55,T_OPEN=.6,HOME_HOLD=.6;  // HOME_HOLD: a beat on the closed screen so the home riff can finish before the reload
 // which riff plays on the way home: none from the editor / test heists, a glum one after a loss, the happy one otherwise
