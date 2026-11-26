@@ -3119,9 +3119,13 @@ function markHeistStart(){if(TEST_HEIST||REPLAY)return;const opR=OPP&&!OPP.cpu&&
 function clearHeistMark(){if(prog.get('heistInProgress',null))prog.set('heistInProgress',null)}
 let quitChecked=false;
 function applyQuitPenalty(){if(quitChecked||MODE!=='hub'||TEST_HEIST||REPLAY)return;quitChecked=true;const m=prog.get('heistInProgress',null);if(!m)return;
-  prog.set('heistInProgress',null);const loss=Math.min(-1,Math.round((typeof m.d==='number'?m.d:-2)*QUIT_MUL));RANK=Math.max(0,RANK+loss);saveProg();try{refreshLeagueUI()}catch(e){}
+  prog.set('heistInProgress',null);const loss=Math.min(-1,Math.round((typeof m.d==='number'?m.d:-2)*QUIT_MUL)),oldL=LEAGUE;RANK=Math.max(0,RANK+loss);saveProg();try{refreshLeagueUI()}catch(e){}
+  // dropped below the league: play the league-change scene (same as losing rank to raids), then show the notice once home
+  const L2=leagueOf(RANK);if(L2.n!==oldL.n&&!trans){prog.set('pendingLeague',{from:oldL.n,to:L2.n});SS.setItem('quitNotice',JSON.stringify({opp:m.opp,loss}));location.hash='home';location.reload();return}
+  showQuitNotice(m.opp,loss)}
+function showQuitNotice(opp,loss){
   const show=()=>{if(document.getElementById('title')||modalOpen||trans){setTimeout(show,400);return}
-    openPanel('Heist abandoned',`<p>You left your last heist${m.opp?` on <b>${m.opp}'s</b> manor`:''} before it finished.</p><p class="muted">Leaving a heist early costs 1.5× the rank a loss would have, because the defender doesn't get the replay or their points.</p><p style="font:900 22px system-ui;color:#ff8a7a;text-align:center;margin:10px 0 0">${loss} rank</p>`)};
+    openPanel('Heist abandoned',`<p>You left your last heist${opp?` on <b>${opp}'s</b> manor`:''} before it finished.</p><p class="muted">Leaving a heist early costs 1.5× the rank a loss would have, because the defender doesn't get the replay or their points.</p><p style="font:900 22px system-ui;color:#ff8a7a;text-align:center;margin:10px 0 0">${loss} rank</p>`)};
   show()}
 (async()=>{try{let db=null;
   if(window.claude&&claude.use){db=await claude.use('db');if(db){USERS=await claude.use('user');BACKEND='claude'}}
@@ -4246,6 +4250,7 @@ if(REPLAY){team.splice(0,team.length,...REPLAY.team.filter(n=>COATS.some(k=>k.na
 else if(location.hash==='#heist'&&!TEST_HEIST&&prog.get('heistInProgress',null)){location.hash='home';location.reload()}   // refreshed mid-heist: back home (the penalty is applied there), not a free restart
 else if(location.hash==='#heist'||TEST_HEIST){startHeist(true);trans={t:0,phase:'hold',retry:true,short:true,hold:TEST_HEIST?null:.8}}   // a real heist lingers on "Robbing X's manor" a moment longer
 if(location.hash==='#home'&&SS.getItem('openSecurity')){SS.removeItem('openSecurity');setTimeout(()=>enterSecurity(),50)}
+{const qn=SS.getItem('quitNotice');if(qn){SS.removeItem('quitNotice');try{const o=JSON.parse(qn);showQuitNotice(o.opp,o.loss)}catch(e){}}}   // abandoned-heist notice after a demotion scene
 if(location.hash==='#home'){const pl=prog.get('pendingLeague',null);prog.set('pendingLeague',null);if(pl)document.documentElement.className='booting';trans=pl?{t:0,phase:'hold',home:true,league:LEAGUE.name}:{t:0,phase:'hold',home:true,short:true}}
 requestAnimationFrame(frame);
 </script>
