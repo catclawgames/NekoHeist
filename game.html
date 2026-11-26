@@ -972,7 +972,7 @@ function tintTree(dark,mid,light,cv=treeImg){const m=cv.getContext('2d');m.save(
 const shutters=[]; // v: 1 = open (raised), 0 = closed. Right side is always shut.
 for(let i=0;i<FLOORS;i++)for(let s=0;s<2;s++)shutters.push({i,side:s,v:s?0:1,target:s?0:1});
 seed=4242;
-const lanterns=[];for(let i=0;i<FLOORS;i++)if(i%2===0)lanterns.push({x:44,y:floorTop(i)+4,ph:R()*6.28});
+const lanterns=[];for(let i=0;i<FLOORS;i++)if(i%2===0)lanterns.push({x:44,y:floorTop(i)-3,ph:R()*6.28});   /* string starts inside the beam above, so the lantern hangs from it */
 const stars=[];for(let k=0;k<150;k++)stars.push({x:R(),y:R(),s:R()<.85?1:2,ph:R()*6.28,sp:.5+R()*2});
 const clouds=[];for(let k=0;k<7;k++)clouds.push({x:R(),y:.05+R()*.5,img:k%4,sp:5+R()*7,sc:.6+R()*.6});
 const flies=[];for(let k=0;k<30;k++){const hi=k<6;flies.push({x:-380+R()*(W+760),y:hi?-130-R()*300:-110+R()*130,ph:R()*6.28,sp:.4+R()*.7,ax:14+R()*24,ay:8+R()*14,bx:0,by:0,bl:.6+R()*1.2})}
@@ -2888,7 +2888,7 @@ function updateHub(dt){
 let hubX=W*.25,hubY=null,hubVel=0,hubVelY=0,hubDrag=null,hubZf=1,hubPinch=null;const hubPtrs=new Map();
 const HUB_ZMAX=3;
 function hubPads(){return isSec()?{b:(secTray.offsetHeight||140)+6,t:safeTop+(secBar.offsetHeight||50)+16}:{b:BOT(),t:0}}
-function hubZ(){const p=hubPads();return (SHh-p.b-p.t)/(GROUND_Y-(BY0-30))}
+function hubZ(){const p=hubPads();return (SHh-p.b-p.t)/(GROUND_Y-(BY0-40))}   // same top edge as hubCamApply's scroll limit, so fully zoomed out fills it exactly (no leftover vertical scroll)
 function hubCamApply(){const z=hubZ()*hubZf,hw=SW/2/z,hh=SHh/2/z,lo=-260+hw,hi=W+260-hw;hubX=lo>hi?W/2:Math.max(lo,Math.min(hi,hubX));
   const yBot=GROUND_Y+hubPads().b/z-hh,yTop=Math.min(yBot,BY0-40+hh);if(hubY==null)hubY=yBot;hubY=Math.max(yTop,Math.min(yBot,hubY));
   hubT={x:hubX,y:hubY,z}}
@@ -3001,7 +3001,7 @@ document.getElementById('heistBtn').addEventListener('click',async e=>{if(trans|
 let trans=null;
 function goHome(){if(trans)return;sfx('whoosh');const ov=document.getElementById('endScreen');ov.classList.remove('show');setTimeout(()=>ov.style.display='none',350);trans={t:0,phase:'close',home:true}}const T_CLOSE=.45,T_HOLD=.55,T_OPEN=.6,HOME_HOLD=.6;  // HOME_HOLD: a beat on the closed screen so the home riff can finish before the reload
 // which riff plays on the way home: none from the editor / test heists, a glum one after a loss, the happy one otherwise
-function homeRiffName(){if(isHub()||TEST_HEIST)return null;return !REPLAY&&gameOver&&!gameOver.win?'lossRiff':'homeRiff'}
+function homeRiffName(){if(isHub()||TEST_HEIST||REPLAY)return null;return !REPLAY&&gameOver&&!gameOver.win?'lossRiff':'homeRiff'}
 function updateTrans(dt){if(!trans)return;trans.t+=dt;
   // the scene is about to reload: fade the music down so the restart isn't a hard cut, and play the "back home" riff
   if(trans.phase==='close'&&(trans.home||trans.retry)&&!trans.faded){trans.faded=true;try{SFX.fadeMusic(T_CLOSE+(trans.home?HOME_HOLD:0))}catch(e){}trans.riff=trans.home?homeRiffName():null;if(trans.riff)sfx(trans.riff)}
@@ -3257,7 +3257,7 @@ function updateRaidDot(){const d=document.querySelector('#raidBtn .dot');if(d)d.
 function timeAgo(t){const s=(Date.now()-t)/1000;return s<60?'just now':s<3600?Math.floor(s/60)+'m ago':s<86400?Math.floor(s/3600)+'h ago':Math.floor(s/86400)+'d ago'}
 async function openRaidLog(){prog.set('unreadRaids',0);updateRaidDot();
   if(!ONLINE){openPanel('Defense log','<p class="muted">Raids on your base show up here once you are online.</p>');return}
-  openPanel('Defense log','<p class="muted">Loading…</p>');await loadRaids();
+  openPanel('Defense log','<p class="muted">Loading…</p>');await loadRaids();prog.set('unreadRaids',0);updateRaidDot();   /* raids that arrived while it loaded are being looked at right now */
   const ids=[...new Set(RAIDS.map(r=>r.attacker))];let ps={};try{ps=await USERS.profiles(ids)}catch(e){}
   const body=panel.querySelector('.body');body.innerHTML='';
   if(!RAIDS.length){body.innerHTML='<p class="muted">Nobody has tried to rob your manor yet.</p>';return}
