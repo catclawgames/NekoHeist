@@ -35,6 +35,7 @@ window.NEKO_FIREBASE = null;
 <meta name="theme-color" content="#141a3a">
 <title>Neko Heist</title>
 <style>
+  body{position:fixed;inset:0;width:100%;overflow:hidden}   /* pinned: the page itself can never scroll (see unscroll) */
   html,body{margin:0;height:100%;background:#0b0e1e;overflow:hidden;touch-action:none;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:system-ui,-apple-system,sans-serif;color:#e8ecff}
   #c{position:fixed;inset:0;width:100%;height:100%;display:block}
@@ -68,7 +69,7 @@ window.NEKO_FIREBASE = null;
   .topBtn.prof .pn{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15}.topBtn.prof b{font-size:14px;color:#ffd45a}.topBtn.prof small{font-size:10.5px;font-weight:700;opacity:.8}
   .row.dbgLg{flex-wrap:wrap}.dbgL{display:flex;gap:6px;width:100%;margin-top:8px}.dbgL .btn{flex:1;padding:7px 0;background:#3a2715!important;color:#f3e2b8!important}.dbgL .btn.on{background:#ffd45a!important;color:#2a1c10!important}
   #panel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,10,24,.55);z-index:9;padding:20px}
- #title{position:fixed;inset:0;z-index:40;background:#0b0d24;transition:opacity .45s ease;cursor:pointer;touch-action:none}#title canvas{width:100%;height:100%;display:block}#title.out{opacity:0;pointer-events:none}
+ #title{position:fixed;inset:0;z-index:40;background:#0b0d24;transition:opacity .55s ease,transform .7s cubic-bezier(.45,0,.2,1);cursor:pointer;touch-action:none}#title canvas{width:100%;height:100%;display:block}#title.out{opacity:0;transform:scale(1.12);pointer-events:none}   /* the title pushes in and fades while the camera cranes down onto the manor */
  #welcome{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:radial-gradient(rgba(20,16,40,.7),rgba(6,8,22,.92));z-index:30;padding:16px}
   #welcome .wcard{width:min(360px,100%);text-align:center;background:linear-gradient(#4e341b,#2b1d11);border:4px solid #17120e;border-radius:20px;box-shadow:inset 0 3px 0 rgba(255,220,160,.25),0 8px 0 #17120e;padding:18px 18px 16px;color:#f3e2b8;font-family:system-ui,-apple-system,sans-serif;animation:pop .35s cubic-bezier(.3,1.4,.5,1)}
   #welcome .wlogo{display:flex;flex-direction:column;align-items:center;line-height:.9;margin:2px 0 8px;transform:rotate(-3deg)}
@@ -219,6 +220,7 @@ window.NEKO_FIREBASE = null;
   #teamBtn{width:64px;height:64px;border:4px solid #17120e;border-radius:14px;background:linear-gradient(#7a5530,#4e341b);box-shadow:inset 0 3px 0 rgba(255,220,160,.25),0 6px 0 #17120e;
     color:#f3e2b8;font:800 10px system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0}
   #teamBtn svg{width:30px;height:30px}
+  #teamBtn{position:relative}#teamBtn.nudge::after{content:'';position:absolute;top:-7px;right:-7px;width:16px;height:16px;border-radius:50%;background:#e8483c;border:3px solid #17120e;animation:pulse 1s infinite alternate}
   #teamChips{display:flex;gap:4px;padding:4px 6px;border-radius:20px;background:rgba(15,10,6,.55);border:2px solid #17120e}
   #teamChips canvas{width:34px;height:34px;border-radius:50%;border:3px solid #17120e;background:#2b1d11}
   #catInfo,#teamPick{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,10,24,.55);z-index:12;padding:20px}
@@ -1320,10 +1322,10 @@ function updateCat(cat,dt,roam){
     const h=heldDir();if(h&&cat===selCat&&isPOV())moveCat(cat,h[0],h[1])}; // a held key keeps the cat going without a pause
   if(cat.mv){const m=cat.mv;m.t+=dt*catSpeed(cat);
     if(m.type==='fall'){cat.moving=false;if(!m.crossed&&m.t>=TD_WAIT+TD_FALL*.55){m.crossed=true;camFollow=true}
-      if(m.t>=TD_WAIT+TD_FALL&&!m.landed){m.landed=true;landFx(m.to.x,m.to.y);landFx(m.to.x,m.to.y);shake=Math.max(shake,.14);emitNoise(cat.cell.f,cat.cell.c,m.to.x,m.to.y);triggerTrap(cat.cell.f,cat.cell.c,cat);stepOnSpikes(cat);triggerShroom(cat);triggerTree(cat);triggerNest(cat);triggerAlarm(cat);triggerLantern(cat);triggerDrum(cat)}
+      if(m.t>=TD_WAIT+TD_FALL&&!m.landed){m.landed=true;landFx(m.to.x,m.to.y);landFx(m.to.x,m.to.y);shake=Math.max(shake,.14);emitNoise(cat.cell.f,cat.cell.c,m.to.x,m.to.y);triggerTrap(cat.cell.f,cat.cell.c,cat);triggerShroom(cat);triggerTree(cat);triggerNest(cat);triggerAlarm(cat);triggerLantern(cat);triggerDrum(cat)}
       if(m.t>=TD_WAIT+TD_FALL+TD_LAND){cat.mv=null;if(!arrive(cat))next()}return}
     if(m.type==='slide'){cat.moving=false;const p=catWorldPos(cat);if(Math.random()<dt*20)puff(p.x-m.dc*10,p.y-2,-m.dc*40,-6,2+Math.random()*2,.25);
-      if(!m.crossed&&(m.dc>0?p.x>=m.bx:p.x<=m.bx)){m.crossed=true;camFollow=true;if(m.ice.uses>=3)breakIce(m.ice);triggerTrap(cat.cell.f,cat.cell.c,cat);stepOnSpikes(cat);triggerShroom(cat);triggerTree(cat);triggerNest(cat);triggerAlarm(cat);triggerLantern(cat);triggerDrum(cat);
+      if(!m.crossed&&(m.dc>0?p.x>=m.bx:p.x<=m.bx)){m.crossed=true;camFollow=true;if(m.ice.uses>=3)breakIce(m.ice);triggerTrap(cat.cell.f,cat.cell.c,cat);triggerShroom(cat);triggerTree(cat);triggerNest(cat);triggerAlarm(cat);triggerLantern(cat);triggerDrum(cat);
         if(cat.loot&&isExitCol(cat.cell.c)){startEscape(cat);return}if(tatamiAt(cat.cell.f,cat.cell.c)&&triggerTatami(cat,m.dc))return;if(iceAt(cat.cell.f,cat.cell.c)&&startSlide(cat,m.dc))return}
       if(m.t>=SLIDE_DUR){cat.mv=null;if(!arrive(cat))next()}return}
     if(m.type==='flung'){cat.moving=m.t>FL_UP;if(cat.moving)cat.walk+=dt*16;if(!m.hit&&m.t>=TAT_HIT){m.hit=true;tatamiHit(cat);if(!cat.mv)return}
@@ -1331,14 +1333,14 @@ function updateCat(cat,dt,roam){
     if(m.type==='bonk'){cat.moving=false;if(!m.hit&&m.t>=BONK_HIT){m.hit=true;sfx('bonk');cat.hp=Math.max(0,(cat.hp==null?1:cat.hp)-ICE_DMG*dmgMul(cat));cat.flashT=.18;cat.flashCol='255,40,50';if(dmgMul(cat)<1){cat.shieldT=.35;cat.flashCol='255,150,150'}if(cat.hp<=0){cat.mv=null;faint(cat);return}shake=Math.max(shake,.22);breakIce(m.ice);const p=catWorldPos(cat);
         for(let k=0;k<6;k++)sparks.push({x:p.x+m.dc*20,y:p.y-30,vx:(Math.random()-.5)*120,vy:-40-Math.random()*60,life:.35,max:.7,r:2.4,col:'#ffe28a'})}
       if(m.t>=BONK_DUR){cat.mv=null;next()}return}
-    if(m.type==='walk'){const pw=cat.walk;cat.walk+=dt*22*catSpeed(cat);if(cat===selCat&&Math.floor(pw/Math.PI)!==Math.floor(cat.walk/Math.PI))sfx('step');cat.moving=true;const p=catWorldPos(cat);if(!m.crossed&&(m.dc>0?p.x>=m.bx:p.x<=m.bx)){m.crossed=true;camFollow=true;triggerTrap(cat.cell.f,cat.cell.c,cat);stepOnSpikes(cat);triggerShroom(cat);triggerTree(cat);triggerNest(cat);triggerAlarm(cat);triggerLantern(cat);triggerDrum(cat);if(cat.loot&&isExitCol(cat.cell.c)){startEscape(cat);return}
+    if(m.type==='walk'){const pw=cat.walk;cat.walk+=dt*22*catSpeed(cat);if(cat===selCat&&Math.floor(pw/Math.PI)!==Math.floor(cat.walk/Math.PI))sfx('step');cat.moving=true;const p=catWorldPos(cat);if(!m.crossed&&(m.dc>0?p.x>=m.bx:p.x<=m.bx)){m.crossed=true;camFollow=true;triggerTrap(cat.cell.f,cat.cell.c,cat);triggerShroom(cat);triggerTree(cat);triggerNest(cat);triggerAlarm(cat);triggerLantern(cat);triggerDrum(cat);if(cat.loot&&isExitCol(cat.cell.c)){startEscape(cat);return}
         if(!cat.didShut&&m.fromCell.c===0&&cat.cell.c===1){cat.didShut=true;const sh=shutterAt(cat.cell.f,0);if(sh.target===1)sh.target=0}
         if(m.dc&&tatamiAt(cat.cell.f,cat.cell.c)&&triggerTatami(cat,m.dc))return;
         if(m.dc&&iceAt(cat.cell.f,cat.cell.c)&&startSlide(cat,m.dc))return}
       if(m.t>=H_DUR){cat.mv=null;cat.moving=false;if(!arrive(cat))next()}}
     else{cat.moving=false;if(!m.camX&&m.t>=J_WIND+J_LEAP*.5)m.camX=true;if(!m.crossed&&m.t>=J_WIND+J_LEAP*(m.df<0?.8:.5)){m.crossed=true;camFollow=true}   // dropping down: only counts as in the lower room once it's nearly on that floor
       if(m.t>=J_WIND+J_LEAP&&!m.landed){m.landed=true;if(PASSIVE[cat.k.name]==='silent'){sfx('hush');shadowLand(m.to.x,m.to.y)}else{sfx('bigLand');landFx(m.to.x,m.to.y);landFx(m.to.x,m.to.y);landFx(m.to.x,m.to.y);shake=Math.max(shake,.16);
-        for(let k=0;k<6;k++){const d=k%2?1:-1;puff(m.to.x+d*(20+Math.random()*10),m.to.y-2,d*(120+Math.random()*80),-4-Math.random()*10,3+Math.random()*2,.3)}}if(PASSIVE[cat.k.name]!=='silent')emitNoise(cat.cell.f,cat.cell.c,m.to.x,m.to.y);triggerTrap(cat.cell.f,cat.cell.c,cat);stepOnSpikes(cat);triggerShroom(cat);triggerTree(cat);triggerNest(cat);triggerAlarm(cat);triggerLantern(cat);triggerDrum(cat);
+        for(let k=0;k<6;k++){const d=k%2?1:-1;puff(m.to.x+d*(20+Math.random()*10),m.to.y-2,d*(120+Math.random()*80),-4-Math.random()*10,3+Math.random()*2,.3)}}if(PASSIVE[cat.k.name]!=='silent')emitNoise(cat.cell.f,cat.cell.c,m.to.x,m.to.y);triggerTrap(cat.cell.f,cat.cell.c,cat);triggerShroom(cat);triggerTree(cat);triggerNest(cat);triggerAlarm(cat);triggerLantern(cat);triggerDrum(cat);
         {const ic=iceAt(cat.cell.f,cat.cell.c);if(ic)breakIce(ic)}
         if(bananaAt(cat.cell.f,cat.cell.c)&&!(cat.loot&&isExitCol(cat.cell.c))){cat.mv=null;checkBanana(cat);return}
         {const nt=netAt(cat.cell.f,cat.cell.c);if(nt&&(nt.state==='set'||nt.state==='reset')&&!(cat.loot&&isExitCol(cat.cell.c))){checkNet(cat);return}}}
@@ -1365,8 +1367,12 @@ let selCat=null,camFollow=false,povZ=null,mmE=0;
 let povOff=false;
 const isPOV=()=>!!(selCat&&selCat.cell&&!povOff&&!selCat.escape&&!gameOver);
 let gameOver=null;
-function BOT(){return RHv+UB}
-function roadTop(){return SHh-RHv-UB}
+function BOT(){return bandCur||RHv+UB}
+// landscape phones in edit mode: the trap tray is shrunk, so the road's top edge comes down to meet it (eased, see frame())
+let secBand=0,bandCur=0;
+function bandTarget(){return isSec()&&secBand>0?secBand:RHv+UB}
+function measureSecBand(){secBand=0;if(!isSec()||!(SW>SHh&&SHh<=520))return;const r=secTray.getBoundingClientRect();if(r.height>0)secBand=Math.max(40,Math.round(SHh-r.top))}
+function roadTop(){return SHh-(bandCur||RHv+UB)}
 function mmH(){return Math.round(Math.max(140,Math.min(210,SHh*.22)))+safeTop}
 function zSel(){return Math.min((SHh-BOT())/(GROUND_Y-(BY0+30)),SW/420)}
 function zFitAll(){return Math.min((SHh-BOT())/(GROUND_Y-(BY0-30)),SW/(W+260))}
@@ -1401,7 +1407,7 @@ function resize(){
   if(window.CPU_CANVAS)dpr=1;   // software-canvas mode (?cpu=1): every image is copied to the screen by the CPU, so draw at 1x to keep it smooth
   cv.width=SW*dpr;cv.height=SHh*dpr;tcv.width=1;tcv.height=1;tcDirty=true;
   const PHONE=matchMedia('(pointer:coarse)').matches&&SHh>SW&&SW<700;
-  safeTop=Math.max(parseFloat(getComputedStyle(document.getElementById('safe')).paddingTop)||0,(SHh>SW&&SW<760)?54:0);
+  safeTop=parseFloat(getComputedStyle(document.getElementById('safe')).paddingTop)||0;   // the real safe-area inset only (the web app / shell already reports the notch and status bar)
   document.getElementById('hint').style.top=(safeTop+78)+'px';
   safeBot=Math.max(parseFloat(getComputedStyle(document.getElementById('safe')).paddingBottom)||0,PHONE?30:0);
   RHv=Math.round(Math.max(SHh<520?96:130,Math.min(220,SHh*.2)));UB=Math.round((SHh<520?10:20)+safeBot);CR=0;
@@ -1964,13 +1970,17 @@ function drawTraps(c,list=TRAPS,all=false){
 const CALTROPS=[[0,7],[1,2],[2,4],[3,6],[4,2]].map(([f,c],i)=>{let sd=(i+3)*7919;const r=()=>{sd=(sd*16807)%2147483647;return sd/2147483647};
   return{f,c,spikes:Array.from({length:9},()=>({u:.08+r()*.84,rot:r()*6.28,s:.8+r()*.4}))}});
 const calAt=(f,c)=>CALTROPS.find(t=>t.f===f&&t.c===c);
+const CAL_IN=24;   // how far past the wall (px) a cat must be before the spikes start hurting
+function inSpikeZone(ct,vc){const x=catWorldPos(ct).x,x0=cellX0(vc.c);return x>=x0+CAL_IN&&x<=x0+cellW(vc.c)-CAL_IN}
 const CAL_DPS=.28;                               // a full bar lasts ~3.6 s standing in spikes
 function updateHealth(dt){
-  for(const ct of cats){if(ct.flashT>0)ct.flashT-=dt;if(!ct.cell||isOut(ct)||ct.escape||ct.dragging){ct.onSpikes=false;continue}if(ct.hp==null)ct.hp=1;
+  for(const ct of cats){if(ct.flashT>0)ct.flashT-=dt;if(!ct.cell||isOut(ct)||ct.escape||ct.dragging){ct.onSpikes=false;ct.inSpikes=false;continue}if(ct.hp==null)ct.hp=1;
     const vc=vcellOf(ct);const airborne=ct.mv&&((ct.mv.type==='jump'&&ct.mv.t>J_WIND&&ct.mv.t<J_WIND+J_LEAP)||(ct.mv.type==='fall'&&ct.mv.t<TD_WAIT+TD_FALL));
     ct.onSpikes=false;
     {const ca=calAt(vc.f,vc.c);if(ca&&!airborne)tryDisarm(ct,CALTROPS,ca,'Caltrops')}
-    if(calAt(vc.f,vc.c)&&!airborne){ct.onSpikes=true;ct.painT=(ct.painT||0)+dt;ct.hp=Math.max(0,ct.hp-CAL_DPS*dmgMul(ct)*dt);ct.hurtT=(ct.hurtT||0)-dt;
+    // spikes only bite once the cat is CAL_IN px past the wall (walking through a room: ~1.14 s in the spikes instead of 1.5 s, one pain tick fewer)
+    const inZ=!!calAt(vc.f,vc.c)&&!airborne&&inSpikeZone(ct,vc);if(inZ&&!ct.inSpikes)stepOnSpikes(ct);ct.inSpikes=inZ;
+    if(inZ&&calAt(vc.f,vc.c)&&!isOut(ct)){ct.onSpikes=true;ct.painT=(ct.painT||0)+dt;ct.hp=Math.max(0,ct.hp-CAL_DPS*dmgMul(ct)*dt);ct.hurtT=(ct.hurtT||0)-dt;
       if(ct.hurtT<=0){ct.hurtT=.32;sfx('ouch');ct.flashT=.13;ct.flashCol='255,40,50';if(dmgMul(ct)<1){ct.shieldT=.35;ct.flashCol='255,150,150'}const p=catWorldPos(ct);for(let k=0;k<2;k++)sparks.push({x:p.x+(Math.random()-.5)*30,y:p.y-4,vx:(Math.random()-.5)*60,vy:-60-Math.random()*40,life:.35,max:.7,r:2.2,col:'#ff6a6a'})}
       if(ct.hp<=0)faint(ct)}}
   for(const ct of cats)if(ct.fainted){const f=ct.fainted,pt=f.t;f.t+=dt;const L=FAINT_DZ+.35;if(pt<L&&f.t>=L){landFx(f.x,f.y);shake=Math.max(shake,.08)}
@@ -2864,7 +2874,12 @@ function hubCamApply(){const z=hubZ()*hubZf,hw=SW/2/z,hh=SHh/2/z,lo=-260+hw,hi=W
   const yBot=GROUND_Y+hubPads().b/z-hh,yTop=Math.min(yBot,BY0-40+hh);if(hubY==null)hubY=yBot;hubY=Math.max(yTop,Math.min(yBot,hubY));
   hubT={x:hubX,y:hubY,z}}
 let hubT=null;
-function hubCamEase(dt){if(!hubT)return;const k=1-Math.exp(-dt*22);if(cam.z<=0||!isFinite(cam.z))Object.assign(cam,hubT);
+// leaving the title: the camera starts up in the night sky, pulled back a little, and cranes down onto the manor
+let hubIntro=null;
+function startHubIntro(){if(!hubT)return;hubIntro={t:0,dur:1.15,from:{x:hubT.x,y:hubT.y-SHh*.3/hubT.z,z:hubT.z*.82}};Object.assign(cam,hubIntro.from)}
+function hubCamEase(dt){if(!hubT)return;
+  if(hubIntro){hubIntro.t+=dt;const q=Math.min(1,hubIntro.t/hubIntro.dur),e=1-Math.pow(1-q,3),f=hubIntro.from;
+    cam.z=Math.exp(Math.log(f.z)+(Math.log(hubT.z)-Math.log(f.z))*e);cam.x=f.x+(hubT.x-f.x)*e;cam.y=f.y+(hubT.y-f.y)*e;if(q>=1)hubIntro=null;return}const k=1-Math.exp(-dt*22);if(cam.z<=0||!isFinite(cam.z))Object.assign(cam,hubT);
   cam.z=Math.exp(Math.log(cam.z)+(Math.log(hubT.z)-Math.log(cam.z))*k);cam.x+=(hubT.x-cam.x)*k;cam.y+=(hubT.y-cam.y)*k}
 function hubZoomAt(f,sx,sy){const z0=hubZ()*hubZf,w={x:(sx-SW/2)/z0+hubX,y:(sy-SHh/2)/z0+hubY};hubZf=Math.max(1,Math.min(HUB_ZMAX,hubZf*f));const z=hubZ()*hubZf;
   hubX=w.x-(sx-SW/2)/z;hubY=w.y-(sy-SHh/2)/z;hubCamApply()}
@@ -2878,7 +2893,7 @@ function drawHubCats(c,z){
 }
 function hubCatAt(sx,sy){const p=toWorld(sx,sy);let best=null,bd=1e9;
   for(const h of hubCats){const y=floorBottom(h.f)-7,d=Math.hypot(p.x-h.x,p.y-(y-CAT_WORLD*.45));if(Math.abs(p.x-h.x)<CAT_WORLD*.75&&p.y<y+10&&p.y>y-CAT_WORLD*1.15&&d<bd){bd=d;best=h}}return best}
-function hubDown(e){if(modalOpen||trans||finding)return;
+function hubDown(e){if(modalOpen||trans||finding)return;hubIntro=null;
   // a second finger while the first is holding a placed part: put the part back and treat both fingers as a camera gesture
   if(isSec()&&secDrag&&secDrag.pid!=null&&secDrag.pid!==e.pointerId){const d=secDrag;secCancel();hubPtrs.set(d.pid,{x:d.x,y:d.y})}
   else if(isSec()&&hubPtrs.size===0&&secDown(e)){secDrag.pid=e.pointerId;return}
@@ -2901,6 +2916,8 @@ cv.addEventListener('wheel',e=>{if(!isHub()||modalOpen)return;e.preventDefault()
 /* ---- team: which cats go on the heist (max 3), remembered on this device ---- */
 const TEAM_MAX=3;let team=OWNED.slice(0,TEAM_MAX);
 try{const t=(JSON.parse(localStorage.getItem('heistTeam')||'null')||[]).map(n=>RENAMED[n]||n);if(Array.isArray(t)&&t.length&&t.every(n=>owns(n)))team=t.slice(0,TEAM_MAX)}catch(e){}
+// red dot on the Team button after the first cat is bought, until the team is changed once (then never again)
+function teamNudgeUI(){const b=document.getElementById('teamBtn');if(b)b.classList.toggle('nudge',!!prog.get('teamNudge',false)&&!prog.get('teamChanged',false))}
 function saveTeam(){try{localStorage.setItem('heistTeam',JSON.stringify(team))}catch(e){}}
 
 /* ---- modals ---- */
@@ -2939,7 +2956,7 @@ function openTeam(){modalOpen=true;const grid=teamEl.querySelector('.grid');grid
   COATS.forEach((k,i)=>{if(!owns(k.name))return;const b=document.createElement('button');b.className='tm';b.dataset.n=k.name;const cv2=document.createElement('canvas');cv2.width=160;cv2.height=160;b.appendChild(cv2);
     const nm=document.createElement('span');nm.className='nm';nm.textContent=k.name;b.appendChild(nm);const num=document.createElement('span');num.className='num';b.appendChild(num);
     const sb=document.createElement('canvas');sb.width=sb.height=48;sb.className='sk';skillBadge(sb,PASSIVE[k.name]);b.appendChild(sb);
-    portraitInto(cv2,{k,slot:i},170);b.onclick=()=>{const j=team.indexOf(k.name);if(j>=0){if(team.length>1)team.splice(j,1)}else if(team.length<TEAM_MAX)team.push(k.name);refreshTeam()};grid.appendChild(b)});
+    portraitInto(cv2,{k,slot:i},170);b.onclick=()=>{const j=team.indexOf(k.name),n0=team.join();if(j>=0){if(team.length>1)team.splice(j,1)}else if(team.length<TEAM_MAX)team.push(k.name);if(team.join()!==n0&&!prog.get('teamChanged',false)){prog.set('teamChanged',true);prog.set('teamNudge',false);saveProg();teamNudgeUI()}refreshTeam()};grid.appendChild(b)});
   refreshTeam();teamEl.style.display='flex'}
 function refreshTeam(){teamEl.querySelectorAll('.tm').forEach(b=>{const j=team.indexOf(b.dataset.n);b.classList.toggle('on',j>=0);b.querySelector('.num').textContent=j>=0?j+1:''});
   teamEl.querySelector('.count').textContent=`${team.length} / ${TEAM_MAX}`;saveTeam();drawTeamChips()}
@@ -3183,7 +3200,7 @@ async function pickOpponent(){if(!ONLINE||!MYID)return null;const rows=async q=>
 function noteOpponent(id){const L=prog.get('recentOpps',[]).filter(x=>x!==id);L.push(id);prog.set('recentOpps',L.slice(-RECENT_N))}
 function sendRaid(win){if(!ONLINE||!MYID||!OPP)return;try{const id=MYID+'_'+Date.now().toString(36);
   ONLINE.doc('raids/'+id).set({attacker:MYID,attackerName:PNAME,defender:OPP.id,win:!!win,at:Date.now(),arank:RANK,drank:typeof OPP.rank==='number'?OPP.rank:RANK,league:LEAGUE.n,seed:REC.seed,dt:SIM_DT,ev:REC.ev,team:cats.map(c=>c.k.name),base:OPP.base,v:1,gv:GAME_V}).catch(()=>{})}catch(e){}}
-const GAME_V=16; // bump whenever gameplay changes, so older replays are marked instead of playing back wrong
+const GAME_V=17; // bump whenever gameplay changes, so older replays are marked instead of playing back wrong
 const RAID_KEEP_DAYS=30,RAID_KEEP_MAX=40;
 const DEF_WIN=12,DEF_LOSS=10; // your rank when someone raids you, at equal ranks: + for a base that held, - for a robbery
 // scaled by the raider's rank vs yours at the time: holding off a stronger thief pays more, being robbed by a weaker one costs more
@@ -3330,8 +3347,8 @@ function secCanAfford(type,from){const extra=from!=null?trapCost(myTraps[from]?m
 // ---- UI ----
 const secBar=document.getElementById('secBar'),secTray=document.getElementById('secTray');
 function enterSecurity(){document.getElementById('secTest').style.display='flex';MODE='security';closeModals();document.getElementById('hubTop').style.display='none';document.getElementById('hubUI').style.display='none';document.getElementById('hubLeft').style.display='none';
-  secBar.style.display='flex';secTray.style.display='flex';buildTray();refreshSec()}
-function exitSecurity(){document.getElementById('secTest').style.display='none';MODE='hub';saveBase();secBar.style.display='none';secTray.style.display='none';document.getElementById('hubUI').style.display='';document.getElementById('hubLeft').style.display='';document.getElementById('hubTop').style.display=''}
+  secBar.style.display='flex';secTray.style.display='flex';buildTray();refreshSec();measureSecBand()}
+function exitSecurity(){document.getElementById('secTest').style.display='none';MODE='hub';secBand=0;saveBase();secBar.style.display='none';secTray.style.display='none';document.getElementById('hubUI').style.display='';document.getElementById('hubLeft').style.display='';document.getElementById('hubTop').style.display=''}
 function trapIcon(cv2,id){const m=cv2.getContext('2d');m.setTransform(1,0,0,1,0,0);m.clearRect(0,0,cv2.width,cv2.height);const k=cv2.width/90;m.setTransform(k,0,0,k,0,0);
   if(id==='cans'){for(const [x,y,col] of [[30,72,'#c8323c'],[46,72,'#2f7bd5'],[62,72,'#e3a21f'],[38,54,'#2f9e6a'],[54,54,'#8a48d0']])drawCan(m,x,y,0,col)}
   else if(id==='caltrops'){for(const [x,y,r,s] of [[28,66,.4,1.1],[50,72,1.7,1],[66,62,3,1.15],[40,52,2.2,.9]])drawCaltrop(m,x,y,r,s)}
@@ -3470,7 +3487,7 @@ function renderMarket(){mkEl.querySelector('.bal').innerHTML=`<i class="coin"></
       const btn=document.createElement('button');btn.className='buy';
       if(own){btn.textContent=CAT_PRICE[k.name]?'Owned':'Starter';btn.disabled=true;btn.classList.add('own')}
       else if(!unlocked){btn.innerHTML='🔒';btn.disabled=true}
-      else{btn.innerHTML=`<i class="coin"></i>${price}`;if(COINS<price)btn.classList.add('poor');btn.onclick=()=>{if(COINS<price){shakeEl(btn);return}COINS-=price;OWNED.push(k.name);prog.set('ownedCats',OWNED);saveProg();
+      else{btn.innerHTML=`<i class="coin"></i>${price}`;if(COINS<price)btn.classList.add('poor');btn.onclick=()=>{if(COINS<price){shakeEl(btn);return}COINS-=price;OWNED.push(k.name);prog.set('ownedCats',OWNED);saveProg();if(!prog.get('teamChanged',false))prog.set('teamNudge',true);teamNudgeUI();
         hubCats.push(makeHubCat(k,i));sfx('buy');refreshLeagueUI();renderMarket();toast(`${k.name} joined your crew!`)}}
       g.appendChild(btn);g.onclick=e=>{if(e.target===btn)return;openInfo({k,slot:i})};goods.appendChild(g)}
     const lt=TRAP_DEFS.filter(d=>d.league===L.n);
@@ -3679,7 +3696,7 @@ function showTitle(){document.documentElement.classList.add('uiPre');
     draw();requestAnimationFrame(loop)}
   requestAnimationFrame(loop);
   setTimeout(()=>{try{window.draw()}catch(e){}},400);   // one hidden frame of the hub under the title, so its manor tiles are ready when the title lifts
-  const go=()=>{if(gone||t<.35)return;gone=true;titleCovers=false;try{sfx('tap')}catch(e){}if(store.get('welcomed',false))setTimeout(buildHubUI,250);el.classList.add('out');modalOpen=false;removeEventListener('keydown',key,true);
+  const go=()=>{if(gone||t<.35)return;gone=true;titleCovers=false;try{startHubIntro()}catch(e){}try{sfx('tap')}catch(e){}if(store.get('welcomed',false))setTimeout(buildHubUI,250);el.classList.add('out');modalOpen=false;removeEventListener('keydown',key,true);
     setTimeout(()=>{run=false;el.remove();removeEventListener('resize',resize);for(const c of [layA,layB,layO,logoC,cv])if(c)c.width=c.height=0},500);if(!store.get('welcomed',false))setTimeout(showWelcome,350)};
   const key=e=>{e.stopPropagation();e.preventDefault();go()};
   el.addEventListener('pointerdown',e=>e.stopPropagation());el.addEventListener('pointerup',e=>{e.stopPropagation();go()});addEventListener('keydown',key,true)}
@@ -3729,7 +3746,7 @@ function chestDraw(m,o,CH){const w=44,h=24,x=-w/2,y=-h;m.lineJoin='round';
   requestAnimationFrame(chestLoop)})();
 document.getElementById('marketBtn').addEventListener('click',openMarket);
 addEventListener('click',e=>{if(e.target.closest&&e.target.closest('button'))sfx('tap')},true);
-refreshLeagueUI();
+refreshLeagueUI();teamNudgeUI();
 
 /* ============ WIN / LOSS ============ */
 const GROUND_CAT_Y=12,ESC_G=1500;
@@ -3783,7 +3800,7 @@ let last=performance.now(),T=0,_dt=0,camTw=null;
 // switch this tab to software canvases and reload once; ?cpu=0 in the address turns it back off
 let firstFrameChecked=false;
 function frame(now){
-  const raw=(now-last)/1000,dt=Math.min(.05,raw);last=now;_dt=dt;simAcc+=dt;let n=0;perfWatch(raw);
+  const raw=(now-last)/1000,dt=Math.min(.05,raw);last=now;_dt=dt;simAcc+=dt;let n=0;perfWatch(raw);{const bt=bandTarget();bandCur=!bandCur||Math.abs(bt-bandCur)<.5?bt:bandCur+(bt-bandCur)*Math.min(1,dt*10)}
   requestAnimationFrame(frame);   // scheduled first, so one bad frame can never stop the game loop for good
   while(simAcc>=SIM_DT&&n<12){simAcc-=SIM_DT;n++;runSimStep()}if(n>=12)simAcc=0;
   try{frameRest(dt)}catch(e){console.error(e)}if(!titleCovers)try{draw()}catch(e){console.error(e)}   // nothing to draw under the (opaque) title screen
@@ -4126,13 +4143,18 @@ function drawLantern(c,L){
   c.restore();
 }
 // screen-edge spacing for the HTML UI; recomputed on every resize/rotation (it used to be set once at load, so rotating a phone left the UI offset until a reload)
-function applyLayoutVars(){for(const id of ['hubUI','hubLeft','secTray'])document.getElementById(id).style.setProperty('--hb',UB+'px');document.getElementById('secBar').style.setProperty('--st',safeTop+'px');document.getElementById('hubTop').style.setProperty('--st',safeTop+'px')}
+function applyLayoutVars(){for(const id of ['hubUI','hubLeft','secTray'])document.getElementById(id).style.setProperty('--hb',UB+'px');document.getElementById('secBar').style.setProperty('--st',safeTop+'px');document.getElementById('hubTop').style.setProperty('--st',safeTop+'px');try{measureSecBand()}catch(e){}}
 // resize handling: coalesce bursts (rotation fires several events while the size settles) and only re-layout when the size really changed,
 // then snap the camera to its new spot instead of easing — repeated small re-layouts made the camera wobble after rotating
 let lastSz='',rzT=null;
 function onResize(){clearTimeout(rzT);rzT=setTimeout(()=>{const sz=innerWidth+'x'+innerHeight+'@'+(devicePixelRatio||1);if(sz===lastSz){applyLayoutVars();return}lastSz=sz;
   resize();applyLayoutVars();if(isHub()){hubVel=hubVelY=0;hubCamApply();if(hubT)Object.assign(cam,hubT)}},90)}
 addEventListener('resize',onResize);
+// iOS can leave the page scrolled a few pixels after a rotation or after the keyboard closes; everything still draws in place but taps land
+// off (every button's hitbox shifts up until a reload). The game never scrolls, so snap it back whenever the viewport changes
+function unscroll(){const de=document.documentElement,b=document.body;if(scrollX||scrollY||de.scrollTop||b.scrollTop||de.scrollLeft){scrollTo(0,0);de.scrollTop=de.scrollLeft=0;b.scrollTop=b.scrollLeft=0}}
+for(const ev of ['resize','orientationchange','scroll','focusout','pageshow'])addEventListener(ev,()=>{unscroll();setTimeout(unscroll,120);setTimeout(unscroll,500)},{passive:true});
+if(window.visualViewport){visualViewport.addEventListener('resize',()=>{unscroll();setTimeout(unscroll,200)});visualViewport.addEventListener('scroll',unscroll)}
 // iOS reports rotation before the new size / safe areas settle: check again a little later
 addEventListener('orientationchange',()=>{onResize();setTimeout(onResize,350);setTimeout(onResize,800)});
 mkPuff();resize();lastSz=innerWidth+'x'+innerHeight+'@'+(devicePixelRatio||1);initCam();
